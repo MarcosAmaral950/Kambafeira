@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
-import { api } from './api'
+import { api, tokenStore } from './api'
 
 type Usuario = {
   id: string
@@ -28,11 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true)
 
   const recarregar = useCallback(async () => {
+    // Sem token em localStorage não vale a pena chamar /auth/me
+    if (!tokenStore.get()) {
+      setUsuario(null)
+      setCarregando(false)
+      return
+    }
     try {
       const dados = await api.auth.me() as Usuario
       setUsuario(dados)
     } catch {
       setUsuario(null)
+      tokenStore.clear()
     } finally {
       setCarregando(false)
     }

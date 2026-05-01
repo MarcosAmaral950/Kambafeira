@@ -1,5 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
+// Chave para localStorage
+const TOKEN_KEY = 'kambafeira_token'
+
+// Guardar / ler / remover token
+export const tokenStore = {
+  get: () => (typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null),
+  set: (t: string) => typeof window !== 'undefined' && localStorage.setItem(TOKEN_KEY, t),
+  clear: () => typeof window !== 'undefined' && localStorage.removeItem(TOKEN_KEY),
+}
+
 type OpcoesFetch = {
   metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   corpo?: unknown
@@ -14,9 +24,17 @@ export class ErroAPI extends Error {
 export async function apiFetch<T>(rota: string, opcoes: OpcoesFetch = {}): Promise<T> {
   const { metodo = 'GET', corpo } = opcoes
 
+  const cabecalhos: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  // Incluir token se existir
+  const token = tokenStore.get()
+  if (token) cabecalhos['Authorization'] = `Bearer ${token}`
+
   const res = await fetch(`${API_URL}${rota}`, {
     method: metodo,
-    headers: { 'Content-Type': 'application/json' },
+    headers: cabecalhos,
     credentials: 'include',
     body: corpo ? JSON.stringify(corpo) : undefined,
   })
@@ -29,14 +47,32 @@ export async function apiFetch<T>(rota: string, opcoes: OpcoesFetch = {}): Promi
 export const api = {
   // ── Autenticação ──────────────────────────────────────────────
   auth: {
-    login: (email: string, password: string) =>
-      apiFetch('/auth/login', { metodo: 'POST', corpo: { email, password } }),
-    registoComprador: (dados: { email: string; password: string; nome: string; telefone?: string }) =>
-      apiFetch('/auth/registo/comprador', { metodo: 'POST', corpo: dados }),
-    registoFornecedor: (dados: object) =>
-      apiFetch('/auth/registo/fornecedor', { metodo: 'POST', corpo: dados }),
-    logout: () => apiFetch('/auth/logout', { metodo: 'POST' }),
-    me:     () => apiFetch('/auth/me'),
+    login: async (email: string, password: string) => {
+      const dados = await apiFetch<{ usuario: object; token: string }>(
+        '/auth/login', { metodo: 'POST', corpo: { email, password } }
+      )
+      tokenStore.set(dados.token)
+      return dados
+    },
+    registoComprador: async (dados: { email: string; password: string; nome: string; telefone?: string }) => {
+      const res = await apiFetch<{ usuario: object; token: string }>(
+        '/auth/registo/comprador', { metodo: 'POST', corpo: dados }
+      )
+      tokenStore.set(res.token)
+      return res
+    },
+    registoFornecedor: async (dados: object) => {
+      const res = await apiFetch<{ usuario: object; token: string }>(
+        '/auth/registo/fornecedor', { metodo: 'POST', corpo: dados }
+      )
+      tokenStore.set(res.token)
+      return res
+    },
+    logout: async () => {
+      tokenStore.clear()
+      return apiFetch('/auth/logout', { metodo: 'POST' })
+    },
+    me: () => apiFetch('/auth/me'),
   },
 
   // ── Peças ─────────────────────────────────────────────────────
@@ -67,7 +103,7 @@ export const api = {
       apiFetch(`/pedidos/${id}/status`, { metodo: 'PUT', corpo: dados }),
   },
 
-  // ── Dashboard Fornecedor ──────────────────────────────────────
+  // ── Dashboard ─────────────────────────────────────────────────
   dashboard: {
     resumoFornecedor: () => apiFetch('/fornecedor/resumo'),
   },

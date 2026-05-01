@@ -24,7 +24,7 @@ export async function rotasAuth(servidor: FastifyInstance) {
     )
 
     reply.setCookie('token', token, COOKIE_OPTS)
-    return { usuario }
+    return { usuario, token }
   })
 
   // POST /auth/registo/comprador
@@ -38,7 +38,7 @@ export async function rotasAuth(servidor: FastifyInstance) {
     )
 
     reply.status(201).setCookie('token', token, COOKIE_OPTS)
-    return { usuario }
+    return { usuario, token }
   })
 
   // POST /auth/registo/fornecedor
@@ -52,7 +52,7 @@ export async function rotasAuth(servidor: FastifyInstance) {
     )
 
     reply.status(201).setCookie('token', token, COOKIE_OPTS)
-    return { usuario }
+    return { usuario, token }
   })
 
   // POST /auth/logout
