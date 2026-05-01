@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { CardPeca } from '@/components/catalogo/CardPeca'
@@ -26,7 +26,7 @@ type Peca = {
 
 type Resultado = { pecas: Peca[]; total: number; paginas: number; pagina: number }
 
-export default function PaginaInicio() {
+function Catalogo() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [resultado, setResultado] = useState<Resultado | null>(null)
@@ -55,18 +55,15 @@ export default function PaginaInicio() {
 
   function selecionarCategoria(slug: string) {
     setCategoriaAtiva(slug)
-    const url = slug ? `/?categoria=${slug}` : '/'
-    router.push(url)
+    router.push(slug ? `/?categoria=${slug}` : '/')
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-
+    <>
       {/* Filtro de categorias */}
       <div className="bg-white border-b border-gray-200 sticky top-14 z-40">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto py-3">
             {CATEGORIAS_FIXAS.map(cat => (
               <button
                 key={cat.slug}
@@ -86,14 +83,12 @@ export default function PaginaInicio() {
 
       {/* Conteúdo */}
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Cabeçalho de resultados */}
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-gray-500">
             {carregando ? 'A carregar…' : `${resultado?.total ?? 0} peças encontradas`}
           </p>
         </div>
 
-        {/* Grid de peças */}
         {carregando ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -121,6 +116,17 @@ export default function PaginaInicio() {
           </div>
         )}
       </main>
+    </>
+  )
+}
+
+export default function PaginaInicio() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <Suspense fallback={<div className="p-8 text-center text-gray-400">A carregar…</div>}>
+        <Catalogo />
+      </Suspense>
     </div>
   )
 }
