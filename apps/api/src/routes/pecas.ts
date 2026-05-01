@@ -1,9 +1,9 @@
 import { FastifyInstance } from 'fastify'
-import { schemaCriarPeca, schemaEditarPeca, schemaFiltrosPecas } from '../schemas/pecas'
+import { schemaCriarPeca, schemaEditarPeca, schemaFiltrosPecas, schemaAtualizarEstoque } from '../schemas/pecas'
 import {
   criarPecaServico, listarPecasServico, obterPecaServico,
   editarPecaServico, removerPecaServico, pecasFornecedorServico,
-  obterFornecedorId,
+  obterFornecedorId, obterPecaFornecedorServico, atualizarEstoqueServico,
 } from '../services/pecas'
 
 export async function rotasPecas(servidor: FastifyInstance) {
@@ -26,6 +26,27 @@ export async function rotasPecas(servidor: FastifyInstance) {
     async (req) => {
       const fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
       return pecasFornecedorServico(servidor.db, fornecedorId)
+    }
+  )
+
+  // GET /fornecedor/pecas/:id — detalhe de uma peça do fornecedor (qualquer status)
+  servidor.get<{ Params: { id: string } }>(
+    '/fornecedor/pecas/:id',
+    { preHandler: [servidor.apenasFornecedor] },
+    async (req) => {
+      const fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
+      return obterPecaFornecedorServico(servidor.db, req.params.id, fornecedorId)
+    }
+  )
+
+  // PATCH /fornecedor/pecas/:id/estoque — actualização rápida de estoque, preço e/ou status
+  servidor.patch<{ Params: { id: string } }>(
+    '/fornecedor/pecas/:id/estoque',
+    { preHandler: [servidor.apenasFornecedor] },
+    async (req) => {
+      const dados = schemaAtualizarEstoque.parse(req.body)
+      const fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
+      return atualizarEstoqueServico(servidor.db, req.params.id, fornecedorId, dados)
     }
   )
 

@@ -3,6 +3,7 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { Campo } from '@/components/ui/Campo'
 import { Botao } from '@/components/ui/Botao'
+import { UploadFotos } from '@/components/ui/UploadFotos'
 import { api, ErroAPI } from '@/lib/api'
 
 type Categoria = { id: string; nome: string }
@@ -24,7 +25,6 @@ export default function PaginaNovaPeca() {
     ano_veiculo_de: '',
     estoque: '1',
     fotos: [] as string[],
-    foto_principal: '',
     status: 'activo',
   })
 
@@ -36,18 +36,25 @@ export default function PaginaNovaPeca() {
     setForm(prev => ({ ...prev, [campo]: valor }))
   }
 
+  function atualizarFotos(novasfotos: string[]) {
+    setForm(prev => ({ ...prev, fotos: novasfotos }))
+  }
+
   async function submeter(e: FormEvent) {
     e.preventDefault()
     setErro('')
     setCarregando(true)
     try {
+      // A foto principal é sempre a primeira do array
+      const foto_principal = form.fotos[0] ?? undefined
+
       const dados = {
         ...form,
-        preco: parseFloat(form.preco),
-        estoque: parseInt(form.estoque),
+        preco:          parseFloat(form.preco),
+        estoque:        parseInt(form.estoque),
         ano_veiculo_de: form.ano_veiculo_de ? parseInt(form.ano_veiculo_de) : undefined,
-        foto_principal: form.foto_principal || undefined,
-        fotos: form.foto_principal ? [form.foto_principal] : [],
+        foto_principal,
+        fotos:          form.fotos,
       }
       await api.pecas.criar(dados)
       router.push('/dashboard/pecas')
@@ -137,9 +144,8 @@ export default function PaginaNovaPeca() {
             placeholder="1" required />
         </div>
 
-        <Campo label="URL da foto principal" value={form.foto_principal}
-          onChange={e => atualizar('foto_principal', e.target.value)}
-          placeholder="https://res.cloudinary.com/…" />
+        {/* Upload de fotos via Cloudinary */}
+        <UploadFotos fotos={form.fotos} onChange={atualizarFotos} />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Estado de publicação</label>

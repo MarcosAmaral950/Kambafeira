@@ -6,6 +6,7 @@ import { rotasDashboard } from './dashboard'
 import { rotasAdmin } from './admin'
 import { rotasAvaliacoes } from './avaliacoes'
 import { rotasSeed } from './seed'
+import { rotasUpload } from './upload'
 
 export async function rotasIndex(servidor: FastifyInstance) {
   servidor.get('/health', async () => ({
@@ -21,4 +22,5 @@ export async function rotasIndex(servidor: FastifyInstance) {
   await servidor.register(rotasAdmin)
   await servidor.register(rotasAvaliacoes)
   await servidor.register(rotasSeed)
+  await servidor.register(rotasUpload)
 }

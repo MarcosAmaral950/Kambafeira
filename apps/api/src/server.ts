@@ -6,6 +6,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
 import cookie from '@fastify/cookie'
+import multipart from '@fastify/multipart'
 
 import { pluginBancoDados } from './plugins/db'
 import { pluginAuth } from './plugins/auth'
@@ -38,6 +39,11 @@ async function iniciar() {
   })
 
   await servidor.register(cookie)
+
+  // Registar multipart para suporte a upload de ficheiros (máximo 10MB por imagem)
+  await servidor.register(multipart, {
+    limits: { fileSize: 10 * 1024 * 1024 },
+  })
 
   await servidor.register(jwt, {
     secret: process.env.JWT_SECRET ?? 'segredo_dev_nao_usar_em_prod',

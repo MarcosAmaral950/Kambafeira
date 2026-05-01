@@ -1,5 +1,5 @@
 import { Pool } from 'pg'
-import type { CriarPecaInput, EditarPecaInput, FiltrosPecasInput } from '../schemas/pecas'
+import type { CriarPecaInput, EditarPecaInput, FiltrosPecasInput, AtualizarEstoqueInput } from '../schemas/pecas'
 
 export async function obterFornecedorId(db: Pool, usuarioId: string): Promise<string> {
   const { rows } = await db.query(
@@ -174,4 +174,60 @@ export async function pecasFornecedorServico(db: Pool, fornecedorId: string) {
     [fornecedorId]
   )
   return rows
+}
+
+// Obter uma peça específica do fornecedor (qualquer status, excepto removido)
+export async function obterPecaFornecedorServico(db: Pool, id: string, fornecedorId: string) {
+  const { rows } = await db.query(
+    `SELECT p.*,
+            c.nome AS categoria, c.slug AS categoria_slug
+     FROM pecas p
+     JOIN categorias c ON c.id = p.categoria_id
+     WHERE p.id = $1 AND p.fornecedor_id = $2 AND p.status != 'removido'`,
+    [id, fornecedorId]
+  )
+  if (!rows[0]) throw { statusCode: 404, message: 'Peça não encontrada' }
+  return rows[0]
+}
+
+// Actualização rápida de estoque, preço e/ou status
+export async function atualizarEstoqueServico(
+  db: Pool, id: string, fornecedorId: string, dados: AtualizarEstoqueInput
+) {
+  // Verificar que a peça pertence ao fornecedor e não está removida
+  const { rows: existente } = await db.query(
+    "SELECT id FROM pecas WHERE id = $1 AND fornecedor_id = $2 AND status != 'removido'",
+    [id, fornecedorId]
+  )
+  if (!existente[0]) throw { statusCode: 404, message: 'Peça não encontrada' }
+
+  // Construir SET dinâmico apenas com os campos fornecidos
+  const setCampos: string[] = []
+  const valores: unknown[] = [id]
+  let i = 2
+
+  if (dados.estoque !== undefined) {
+    setCampos.push(`estoque = $${i++}`)
+    valores.push(dados.estoque)
+  }
+  if (dados.preco !== undefined) {
+    setCampos.push(`preco = $${i++}`)
+    valores.push(dados.preco)
+  }
+  if (dados.status !== undefined) {
+    setCampos.push(`status = $${i++}`)
+    valores.push(dados.status)
+    // Se está a activar, definir publicada_em se ainda não estava definido
+    if (dados.status === 'activo') {
+      setCampos.push(`publicada_em = COALESCE(publicada_em, NOW())`)
+    }
+  }
+
+  if (setCampos.length === 0) throw { statusCode: 400, message: 'Nenhum campo para actualizar' }
+
+  const { rows } = await db.query(
+    `UPDATE pecas SET ${setCampos.join(', ')} WHERE id = $1 RETURNING id, estoque, preco, status`,
+    valores
+  )
+  return rows[0]
 }

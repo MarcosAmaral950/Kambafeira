@@ -20,6 +20,14 @@ export const schemaEditarPeca = schemaCriarPeca.partial().extend({
   status: z.enum(['rascunho', 'activo', 'suspenso']).optional(),
 })
 
+export const schemaAtualizarEstoque = z.object({
+  estoque: z.number().int().min(0).optional(),
+  preco:   z.number().positive('Preço deve ser positivo').optional(),
+  status:  z.enum(['rascunho', 'activo', 'suspenso']).optional(),
+}).refine(d => d.estoque !== undefined || d.preco !== undefined || d.status !== undefined, {
+  message: 'Pelo menos um campo (estoque, preco ou status) deve ser fornecido',
+})
+
 export const schemaFiltrosPecas = z.object({
   categoria: z.string().optional(),
   marca: z.string().optional(),
@@ -35,3 +43,4 @@ export const schemaFiltrosPecas = z.object({
 export type CriarPecaInput = z.infer<typeof schemaCriarPeca>
 export type EditarPecaInput = z.infer<typeof schemaEditarPeca>
 export type FiltrosPecasInput = z.infer<typeof schemaFiltrosPecas>
+export type AtualizarEstoqueInput = z.infer<typeof schemaAtualizarEstoque>

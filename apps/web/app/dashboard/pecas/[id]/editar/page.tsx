@@ -3,13 +3,15 @@ import { useState, useEffect, FormEvent } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Campo } from '@/components/ui/Campo'
 import { Botao } from '@/components/ui/Botao'
+import { UploadFotos } from '@/components/ui/UploadFotos'
 import { api, ErroAPI } from '@/lib/api'
 
 type Categoria = { id: string; nome: string }
 type Peca = {
   id: string; titulo: string; descricao: string; preco: string; condicao: string
   categoria_id: string; marca_veiculo?: string; modelo_veiculo?: string
-  ano_veiculo_de?: number; estoque: number; foto_principal?: string; status: string
+  ano_veiculo_de?: number; estoque: number; foto_principal?: string
+  fotos: string[]; status: string
 }
 
 export default function PaginaEditarPeca() {
@@ -24,16 +26,24 @@ export default function PaginaEditarPeca() {
   const [form, setForm] = useState({
     categoria_id: '', titulo: '', descricao: '', preco: '', condicao: 'bom',
     marca_veiculo: '', modelo_veiculo: '', ano_veiculo_de: '',
-    estoque: '1', foto_principal: '', status: 'activo',
+    estoque: '1', fotos: [] as string[], status: 'activo',
   })
 
   useEffect(() => {
     Promise.all([
       api.categorias.listar(),
-      api.pecas.obter(id),
+      // Usar obterMinha para suportar qualquer status (rascunho, suspenso, etc.)
+      api.pecas.obterMinha(id),
     ]).then(([cats, peca]) => {
       setCategorias(cats as Categoria[])
       const p = peca as Peca
+
+      // Normalizar o array de fotos: garantir que foto_principal é sempre o primeiro elemento
+      let fotosNormalizadas = Array.isArray(p.fotos) ? [...p.fotos] : []
+      if (p.foto_principal && !fotosNormalizadas.includes(p.foto_principal)) {
+        fotosNormalizadas = [p.foto_principal, ...fotosNormalizadas]
+      }
+
       setForm({
         categoria_id:   p.categoria_id ?? '',
         titulo:         p.titulo,
@@ -44,7 +54,7 @@ export default function PaginaEditarPeca() {
         modelo_veiculo: p.modelo_veiculo ?? '',
         ano_veiculo_de: p.ano_veiculo_de?.toString() ?? '',
         estoque:        p.estoque.toString(),
-        foto_principal: p.foto_principal ?? '',
+        fotos:          fotosNormalizadas,
         status:         p.status,
       })
     }).finally(() => setACarregar(false))
@@ -54,17 +64,25 @@ export default function PaginaEditarPeca() {
     setForm(prev => ({ ...prev, [campo]: valor }))
   }
 
+  function atualizarFotos(novasfotos: string[]) {
+    setForm(prev => ({ ...prev, fotos: novasfotos }))
+  }
+
   async function submeter(e: FormEvent) {
     e.preventDefault()
     setErro('')
     setCarregando(true)
     try {
+      // A foto principal é sempre a primeira do array
+      const foto_principal = form.fotos[0] ?? undefined
+
       await api.pecas.editar(id, {
         ...form,
-        preco: parseFloat(form.preco),
-        estoque: parseInt(form.estoque),
+        preco:          parseFloat(form.preco),
+        estoque:        parseInt(form.estoque),
         ano_veiculo_de: form.ano_veiculo_de ? parseInt(form.ano_veiculo_de) : undefined,
-        foto_principal: form.foto_principal || undefined,
+        foto_principal,
+        fotos:          form.fotos,
       })
       router.push('/dashboard/pecas')
     } catch (err) {
@@ -136,8 +154,8 @@ export default function PaginaEditarPeca() {
             onChange={e => atualizar('estoque', e.target.value)} required />
         </div>
 
-        <Campo label="URL da foto principal" value={form.foto_principal}
-          onChange={e => atualizar('foto_principal', e.target.value)} />
+        {/* Upload de fotos via Cloudinary */}
+        <UploadFotos fotos={form.fotos} onChange={atualizarFotos} />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>

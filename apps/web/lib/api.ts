@@ -11,7 +11,7 @@ export const tokenStore = {
 }
 
 type OpcoesFetch = {
-  metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   corpo?: unknown
 }
 
@@ -81,11 +81,16 @@ export const api = {
       const qs = params ? '?' + new URLSearchParams(params).toString() : ''
       return apiFetch(`/pecas${qs}`)
     },
-    obter:  (id: string)            => apiFetch(`/pecas/${id}`),
-    criar:  (dados: object)         => apiFetch('/pecas',      { metodo: 'POST',   corpo: dados }),
-    editar: (id: string, dados: object) => apiFetch(`/pecas/${id}`, { metodo: 'PUT', corpo: dados }),
-    remover:(id: string)            => apiFetch(`/pecas/${id}`, { metodo: 'DELETE' }),
-    minhas: ()                      => apiFetch('/fornecedor/pecas'),
+    obter:       (id: string)             => apiFetch(`/pecas/${id}`),
+    // Obter peça própria (qualquer status, incluindo rascunho/suspenso)
+    obterMinha:  (id: string)             => apiFetch(`/fornecedor/pecas/${id}`),
+    criar:       (dados: object)          => apiFetch('/pecas',      { metodo: 'POST',   corpo: dados }),
+    editar:      (id: string, dados: object) => apiFetch(`/pecas/${id}`, { metodo: 'PUT', corpo: dados }),
+    remover:     (id: string)             => apiFetch(`/pecas/${id}`, { metodo: 'DELETE' }),
+    minhas:      ()                       => apiFetch('/fornecedor/pecas'),
+    // Actualização rápida de estoque, preço e/ou status
+    atualizarRapido: (id: string, dados: { estoque?: number; preco?: number; status?: string }) =>
+      apiFetch(`/fornecedor/pecas/${id}/estoque`, { metodo: 'PATCH', corpo: dados }),
   },
 
   // ── Categorias ────────────────────────────────────────────────
@@ -118,6 +123,26 @@ export const api = {
     pedidos:      ()                => apiFetch('/admin/pedidos'),
     chaves:       ()                => apiFetch('/admin/chaves'),
     gerarChave:   ()                => apiFetch('/admin/chaves', { metodo: 'POST' }),
+  },
+
+  // ── Upload de ficheiros ───────────────────────────────────────
+  upload: {
+    imagem: async (ficheiro: File): Promise<{ url: string; public_id: string }> => {
+      const form = new FormData()
+      form.append('imagem', ficheiro)
+      const token = tokenStore.get()
+      const cabecalhos: Record<string, string> = {}
+      if (token) cabecalhos['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${API_URL}/upload/imagem`, {
+        method: 'POST',
+        headers: cabecalhos,
+        body: form,
+        credentials: 'include',
+      })
+      const dados = await res.json()
+      if (!res.ok) throw new ErroAPI(res.status, dados.erro ?? 'Erro no upload')
+      return dados as { url: string; public_id: string }
+    },
   },
 
   // ── Avaliações ────────────────────────────────────────────────
