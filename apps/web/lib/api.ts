@@ -177,6 +177,58 @@ export const api = {
     obter: (id: string) => apiFetch(`/fornecedores/${id}`),
   },
 
+  // ── Transportadoras ───────────────────────────────────────────
+  transportadoras: {
+    listar: () => apiFetch('/transportadoras'),
+    calcular: (params: { transportadora_id: string; provincia_destino: string; peso_kg: number; provincia_origem?: string }) => {
+      const qs = new URLSearchParams({
+        transportadora_id: params.transportadora_id,
+        provincia_destino: params.provincia_destino,
+        peso_kg: String(params.peso_kg),
+        ...(params.provincia_origem ? { provincia_origem: params.provincia_origem } : {}),
+      })
+      return apiFetch(`/transportadoras/calcular?${qs}`)
+    },
+    admin: {
+      listar: () => apiFetch('/admin/transportadoras'),
+      criar: (dados: object) => apiFetch('/admin/transportadoras', { metodo: 'POST', corpo: dados }),
+      editar: (id: string, dados: object) => apiFetch(`/admin/transportadoras/${id}`, { metodo: 'PUT', corpo: dados }),
+      adicionarZona: (id: string, dados: object) => apiFetch(`/admin/transportadoras/${id}/zonas`, { metodo: 'POST', corpo: dados }),
+      editarZona: (id: string, dados: object) => apiFetch(`/admin/zonas/${id}`, { metodo: 'PUT', corpo: dados }),
+      removerZona: (id: string) => apiFetch(`/admin/zonas/${id}`, { metodo: 'DELETE' }),
+    },
+  },
+
+  // ── Fretes ────────────────────────────────────────────────────
+  fretes: {
+    criar: (dados: object) => apiFetch('/fretes', { metodo: 'POST', corpo: dados }),
+    meus: () => apiFetch('/fretes/meus'),
+    obter: (id: string) => apiFetch(`/fretes/${id}`),
+    atualizar: (id: string, dados: object) => apiFetch(`/fretes/${id}`, { metodo: 'PUT', corpo: dados }),
+    doFornecedor: () => apiFetch('/fornecedor/fretes'),
+    admin: () => apiFetch('/admin/fretes'),
+  },
+
+  // ── SAC ───────────────────────────────────────────────────────
+  sac: {
+    abrirTicket: (dados: object) => apiFetch('/sac/tickets', { metodo: 'POST', corpo: dados }),
+    meusTickets: () => apiFetch('/sac/tickets/meus'),
+    obterTicket: (id: string) => apiFetch(`/sac/tickets/${id}`),
+    responder: (id: string, dados: object) => apiFetch(`/sac/tickets/${id}/mensagens`, { metodo: 'POST', corpo: dados }),
+    admin: {
+      listar: (filtros?: { status?: string; prioridade?: string }) => {
+        const qs = filtros ? '?' + new URLSearchParams(filtros as Record<string, string>).toString() : ''
+        return apiFetch(`/admin/sac/tickets${qs}`)
+      },
+      atualizar: (id: string, dados: object) => apiFetch(`/admin/sac/tickets/${id}`, { metodo: 'PUT', corpo: dados }),
+    },
+  },
+
+  // ── Endereços de entrega ───────────────────────────────────────
+  enderecos: {
+    meus: () => apiFetch('/enderecos'),
+  },
+
   // ── Avaliações ────────────────────────────────────────────────
   avaliacoes: {
     criar: (vendaId: string, dados: { nota: number; comentario?: string }) =>

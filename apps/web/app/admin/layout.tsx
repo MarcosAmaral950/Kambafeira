@@ -33,6 +33,9 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
     { href: '/admin/pecas',             label: 'Peças',        icone: '🔧' },
     { href: '/admin/stock',             label: 'Stock',        icone: '📦' },
     { href: '/admin/pedidos',           label: 'Pedidos',      icone: '🛒' },
+    { href: '/admin/transportadoras',  label: 'Entregas',     icone: '🚚' },
+    { href: '/admin/fretes',           label: 'Fretes',       icone: '📍' },
+    { href: '/admin/sac',              label: 'SAC',          icone: '🎧' },
     { href: '/admin/chaves',            label: 'Chaves',       icone: '🔑' },
   ]
 

@@ -8,6 +8,9 @@ import { rotasAvaliacoes } from './avaliacoes'
 import { rotasSeed } from './seed'
 import { rotasUpload } from './upload'
 import { rotasStock } from './stock'
+import { rotasTransportadoras } from './transportadoras'
+import { rotasFretes } from './fretes'
+import { rotasSAC } from './sac'
 
 export async function rotasIndex(servidor: FastifyInstance) {
   servidor.get('/health', async () => ({
@@ -25,4 +28,7 @@ export async function rotasIndex(servidor: FastifyInstance) {
   await servidor.register(rotasSeed)
   await servidor.register(rotasUpload)
   await servidor.register(rotasStock)
+  await servidor.register(rotasTransportadoras)
+  await servidor.register(rotasFretes)
+  await servidor.register(rotasSAC)
 }

@@ -12,6 +12,7 @@ const LINKS_FORNECEDOR = [
   { href: '/dashboard/stock',        icone: '📦', label: 'Stock' },
   { href: '/dashboard/pedidos',      icone: '🛒', label: 'Pedidos' },
   { href: '/dashboard/avaliacoes',   icone: '⭐', label: 'Avaliações' },
+  { href: '/sac',                    icone: '🎧', label: 'Suporte' },
 ]
 
 function DropdownMinhaLoja() {
@@ -101,9 +102,12 @@ export function Header() {
             <div className="flex items-center gap-3">
               {/* Botão por perfil */}
               {usuario.perfil === 'comprador' && (
-                <Link href="/pedidos" className="text-gray-600 hover:text-[#dc2626] transition-colors">
-                  Pedidos
-                </Link>
+                <>
+                  <Link href="/pedidos" className="text-gray-600 hover:text-[#dc2626] transition-colors">
+                    Pedidos
+                  </Link>
+                  <Link href="/sac" className="text-gray-600 hover:text-[#dc2626] transition-colors">Suporte</Link>
+                </>
               )}
               {usuario.perfil === 'fornecedor' && <DropdownMinhaLoja />}
               {usuario.perfil === 'admin' && (
@@ -187,9 +191,12 @@ export function Header() {
 
               {/* Comprador */}
               {usuario.perfil === 'comprador' && (
-                <Link href="/pedidos" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
-                  Os meus pedidos
-                </Link>
+                <>
+                  <Link href="/pedidos" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
+                    Os meus pedidos
+                  </Link>
+                  <Link href="/sac" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>Suporte</Link>
+                </>
               )}
 
               {/* Fornecedor — lista expandida */}
