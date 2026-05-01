@@ -65,9 +65,9 @@ export function Header() {
             </div>
           ) : (
             <>
-              <Link href="/(auth)/login" className="text-gray-600 hover:text-[#dc2626] transition-colors">Entrar</Link>
+              <Link href="/login" className="text-gray-600 hover:text-[#dc2626] transition-colors">Entrar</Link>
               <Link
-                href="/(auth)/registo/comprador"
+                href="/registo/comprador"
                 className="bg-[#dc2626] text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
                 Registar
@@ -118,9 +118,9 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link href="/(auth)/login" className="text-sm text-gray-700 py-1">Entrar</Link>
-              <Link href="/(auth)/registo/comprador" className="text-sm text-[#dc2626] font-medium py-1">Registar</Link>
-              <Link href="/(auth)/registo/fornecedor" className="text-sm text-gray-500 py-1">Sou fornecedor</Link>
+              <Link href="/login" className="text-sm text-gray-700 py-1">Entrar</Link>
+              <Link href="/registo/comprador" className="text-sm text-[#dc2626] font-medium py-1">Registar</Link>
+              <Link href="/registo/fornecedor" className="text-sm text-gray-500 py-1">Sou fornecedor</Link>
             </>
           )}
         </div>
