@@ -12,6 +12,21 @@ export async function rotasSeed(servidor: FastifyInstance) {
     const db = servidor.db
     const hash = await bcrypt.hash('Teste@123', 10)
 
+    // Garantir que os 3 admins existem com Teste@123
+    const admins = [
+      { email: 'admin1@kambafeira.ao', nome: 'Admin Angola 1' },
+      { email: 'admin2@kambafeira.ao', nome: 'Admin Angola 2' },
+      { email: 'admin3@kambafeira.ao', nome: 'Admin Brasil' },
+    ]
+    for (const a of admins) {
+      await db.query(
+        `INSERT INTO usuarios (email, password_hash, perfil, nome)
+         VALUES ($1, $2, 'admin', $3)
+         ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash`,
+        [a.email, hash, a.nome]
+      )
+    }
+
     // IDs fixos para facilitar limpeza
     const IDS = {
       forn1: 'a1000000-0000-0000-0000-000000000001',
