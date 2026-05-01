@@ -1,8 +1,67 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Logo } from './Logo'
 import { useAuth } from '@/lib/auth-context'
+
+// Links do dropdown do fornecedor
+const LINKS_FORNECEDOR = [
+  { href: '/dashboard',              icone: '📊', label: 'Painel' },
+  { href: '/dashboard/pecas/nova',   icone: '🔧', label: 'Cadastrar Peça' },
+  { href: '/dashboard/pecas',        icone: '📋', label: 'Minhas Peças' },
+  { href: '/dashboard/stock',        icone: '📦', label: 'Stock' },
+  { href: '/dashboard/pedidos',      icone: '🛒', label: 'Pedidos' },
+  { href: '/dashboard/avaliacoes',   icone: '⭐', label: 'Avaliações' },
+]
+
+function DropdownMinhaLoja() {
+  const [aberto, setAberto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Fechar ao clicar fora
+  useEffect(() => {
+    function aoClicarFora(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setAberto(false)
+      }
+    }
+    document.addEventListener('mousedown', aoClicarFora)
+    return () => document.removeEventListener('mousedown', aoClicarFora)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setAberto(!aberto)}
+        className="flex items-center gap-1 bg-[#dc2626] text-white text-sm px-3 py-1.5 rounded-lg hover:bg-red-700 transition-colors font-medium"
+      >
+        Minha Loja
+        <svg
+          className={`w-3.5 h-3.5 transition-transform ${aberto ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {aberto && (
+        <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+          {LINKS_FORNECEDOR.map(({ href, icone, label }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={() => setAberto(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-[#dc2626] transition-colors"
+            >
+              <span className="text-base">{icone}</span>
+              <span>{label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function Header() {
   const [menuAberto, setMenuAberto] = useState(false)
@@ -37,24 +96,26 @@ export function Header() {
           <Link href="/" className="text-gray-600 hover:text-[#dc2626] transition-colors">Peças</Link>
 
           {carregando ? (
-            <div className="w-20 h-7 bg-gray-100 animate-pulse rounded-lg" />
+            <div className="w-24 h-8 bg-gray-100 animate-pulse rounded-lg" />
           ) : usuario ? (
             <div className="flex items-center gap-3">
+              {/* Botão por perfil */}
               {usuario.perfil === 'comprador' && (
                 <Link href="/pedidos" className="text-gray-600 hover:text-[#dc2626] transition-colors">
                   Pedidos
                 </Link>
               )}
-              {usuario.perfil === 'fornecedor' && (
-                <Link href="/dashboard" className="text-gray-600 hover:text-[#dc2626] transition-colors">
-                  Minha Loja
-                </Link>
-              )}
+              {usuario.perfil === 'fornecedor' && <DropdownMinhaLoja />}
               {usuario.perfil === 'admin' && (
-                <Link href="/admin" className="text-gray-600 hover:text-[#dc2626] transition-colors">
+                <Link
+                  href="/admin"
+                  className="bg-[#111111] text-white text-sm px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                >
                   Admin
                 </Link>
               )}
+
+              {/* Avatar + nome */}
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-[#dc2626] flex items-center justify-center text-white text-xs font-bold">
                   {usuario.nome.charAt(0).toUpperCase()}
@@ -116,27 +177,46 @@ export function Header() {
 
           {usuario ? (
             <>
+              {/* Avatar */}
               <div className="flex items-center gap-2 py-1">
                 <div className="w-8 h-8 rounded-full bg-[#dc2626] flex items-center justify-center text-white text-xs font-bold">
                   {usuario.nome.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-sm font-medium text-gray-700">{usuario.nome}</span>
               </div>
+
+              {/* Comprador */}
               {usuario.perfil === 'comprador' && (
                 <Link href="/pedidos" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
                   Os meus pedidos
                 </Link>
               )}
+
+              {/* Fornecedor — lista expandida */}
               {usuario.perfil === 'fornecedor' && (
-                <Link href="/dashboard" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
-                  Painel do fornecedor
-                </Link>
+                <>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Minha Loja</p>
+                  {LINKS_FORNECEDOR.map(({ href, icone, label }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-2 text-sm text-gray-700 py-1"
+                      onClick={() => setMenuAberto(false)}
+                    >
+                      <span>{icone}</span>
+                      <span>{label}</span>
+                    </Link>
+                  ))}
+                </>
               )}
+
+              {/* Admin */}
               {usuario.perfil === 'admin' && (
                 <Link href="/admin" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
                   Painel admin
                 </Link>
               )}
+
               <Link href="/perfil" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
                 O meu perfil
               </Link>
