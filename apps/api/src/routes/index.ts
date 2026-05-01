@@ -4,6 +4,7 @@ import { rotasPecas } from './pecas'
 import { rotasPedidos } from './pedidos'
 import { rotasDashboard } from './dashboard'
 import { rotasAdmin } from './admin'
+import { rotasAvaliacoes } from './avaliacoes'
 import { rotasSeed } from './seed'
 
 export async function rotasIndex(servidor: FastifyInstance) {
@@ -18,5 +19,6 @@ export async function rotasIndex(servidor: FastifyInstance) {
   await servidor.register(rotasPedidos)
   await servidor.register(rotasDashboard)
   await servidor.register(rotasAdmin)
+  await servidor.register(rotasAvaliacoes)
   await servidor.register(rotasSeed)
 }

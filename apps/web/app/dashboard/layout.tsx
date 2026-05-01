@@ -26,9 +26,10 @@ export default function LayoutDashboard({ children }: { children: React.ReactNod
   if (!usuario || usuario.perfil === 'comprador') return null
 
   const navLinks = [
-    { href: '/dashboard',          label: 'Resumo',  icone: '📊' },
-    { href: '/dashboard/pecas',    label: 'Peças',   icone: '🔧' },
-    { href: '/dashboard/pedidos',  label: 'Pedidos', icone: '📦' },
+    { href: '/dashboard',              label: 'Resumo',     icone: '📊' },
+    { href: '/dashboard/pecas',        label: 'Peças',      icone: '🔧' },
+    { href: '/dashboard/pedidos',      label: 'Pedidos',    icone: '📦' },
+    { href: '/dashboard/avaliacoes',   label: 'Avaliações', icone: '⭐' },
   ]
 
   return (

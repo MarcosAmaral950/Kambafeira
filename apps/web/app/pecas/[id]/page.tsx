@@ -6,6 +6,15 @@ import { useRouter } from 'next/navigation'
 import { Header } from '@/components/Header'
 import { api, ErroAPI } from '@/lib/api'
 
+type Avaliacao = {
+  id: string
+  nota: number
+  comentario?: string
+  resposta?: string
+  criada_em: string
+  comprador_nome: string
+}
+
 type Peca = {
   id: string; titulo: string; descricao: string; preco: number
   condicao: string; fotos: string[]; foto_principal: string | null
@@ -13,6 +22,7 @@ type Peca = {
   ano_veiculo_de: number | null; ano_veiculo_ate: number | null
   numero_parte: string | null; estoque: number; visualizacoes: number
   categoria: string; categoria_slug: string
+  fornecedor_id: string
   fornecedor_nome: string; provincia: string; municipio: string | null
   avaliacao_media: number; total_avaliacoes: number
   fornecedor_whatsapp: string | null
@@ -30,10 +40,24 @@ export default function PaginaDetalhe({ params }: { params: { id: string } }) {
   const [peca, setPeca] = useState<Peca | null>(null)
   const [fotoAtiva, setFotoAtiva] = useState(0)
   const [carregando, setCarregando] = useState(true)
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([])
 
   useEffect(() => {
     api.pecas.obter(params.id)
-      .then(dados => { setPeca(dados as Peca); setCarregando(false) })
+      .then(dados => {
+        const p = dados as Peca
+        setPeca(p)
+        setCarregando(false)
+        // Carregar avaliações do fornecedor (não bloquear)
+        if (p.fornecedor_id) {
+          api.avaliacoes.doFornecedor(p.fornecedor_id)
+            .then((r: unknown) => {
+              const res = r as { avaliacoes: Avaliacao[] }
+              setAvaliacoes(res.avaliacoes ?? [])
+            })
+            .catch(() => {})
+        }
+      })
       .catch(err => {
         if (err instanceof ErroAPI && err.status === 404) router.push('/')
         setCarregando(false)
@@ -197,6 +221,48 @@ export default function PaginaDetalhe({ params }: { params: { id: string } }) {
           <h2 className="font-bold text-[#111111] mb-3">Descrição</h2>
           <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{peca.descricao}</p>
         </div>
+
+        {/* Avaliações do fornecedor */}
+        {avaliacoes.length > 0 && (
+          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="font-bold text-[#111111]">Avaliações do fornecedor</h2>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[#f59e0b] text-lg">★</span>
+                <span className="font-semibold">{Number(peca.avaliacao_media).toFixed(1)}</span>
+                <span className="text-sm text-gray-400">({peca.total_avaliacoes})</span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {avaliacoes.slice(0, 5).map(av => (
+                <div key={av.id} className="border-b border-gray-100 last:border-0 pb-4 last:pb-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div>
+                      <p className="text-sm font-medium text-[#111111]">{av.comprador_nome}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(av.criada_em).toLocaleDateString('pt-PT')}
+                      </p>
+                    </div>
+                    <span className="text-sm">
+                      {[1,2,3,4,5].map(i => (
+                        <span key={i} className={i <= av.nota ? 'text-[#f59e0b]' : 'text-gray-300'}>★</span>
+                      ))}
+                    </span>
+                  </div>
+                  {av.comentario && (
+                    <p className="text-sm text-gray-700 mt-1 leading-relaxed">{av.comentario}</p>
+                  )}
+                  {av.resposta && (
+                    <div className="mt-2 bg-gray-50 rounded-lg p-3 border-l-2 border-[#dc2626]">
+                      <p className="text-xs font-medium text-[#dc2626] mb-0.5">Resposta do fornecedor:</p>
+                      <p className="text-xs text-gray-600">{av.resposta}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

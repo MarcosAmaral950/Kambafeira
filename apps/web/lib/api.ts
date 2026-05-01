@@ -119,4 +119,18 @@ export const api = {
     chaves:       ()                => apiFetch('/admin/chaves'),
     gerarChave:   ()                => apiFetch('/admin/chaves', { metodo: 'POST' }),
   },
+
+  // ── Avaliações ────────────────────────────────────────────────
+  avaliacoes: {
+    criar: (vendaId: string, dados: { nota: number; comentario?: string }) =>
+      apiFetch(`/avaliacoes/${vendaId}`, { metodo: 'POST', corpo: dados }),
+    doFornecedor: (fornecedorId: string) =>
+      apiFetch(`/fornecedor/${fornecedorId}/avaliacoes`),
+    minhas: () =>
+      apiFetch('/fornecedor/minhas/avaliacoes'),
+    pedidosParaAvaliar: () =>
+      apiFetch('/pedidos/meus/avaliar'),
+    responder: (id: string, resposta: string) =>
+      apiFetch(`/avaliacoes/${id}/resposta`, { metodo: 'PUT', corpo: { resposta } }),
+  },
 }

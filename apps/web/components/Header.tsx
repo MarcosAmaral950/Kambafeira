@@ -40,6 +40,11 @@ export function Header() {
             <div className="w-20 h-7 bg-gray-100 animate-pulse rounded-lg" />
           ) : usuario ? (
             <div className="flex items-center gap-3">
+              {usuario.perfil === 'comprador' && (
+                <Link href="/pedidos" className="text-gray-600 hover:text-[#dc2626] transition-colors">
+                  Pedidos
+                </Link>
+              )}
               {usuario.perfil === 'fornecedor' && (
                 <Link href="/dashboard" className="text-gray-600 hover:text-[#dc2626] transition-colors">
                   Minha Loja
@@ -114,6 +119,21 @@ export function Header() {
                 </div>
                 <span className="text-sm font-medium text-gray-700">{usuario.nome}</span>
               </div>
+              {usuario.perfil === 'comprador' && (
+                <Link href="/pedidos" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
+                  Os meus pedidos
+                </Link>
+              )}
+              {usuario.perfil === 'fornecedor' && (
+                <Link href="/dashboard" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
+                  Painel do fornecedor
+                </Link>
+              )}
+              {usuario.perfil === 'admin' && (
+                <Link href="/admin" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
+                  Painel admin
+                </Link>
+              )}
               <button onClick={sair} className="text-sm text-red-600 py-1 text-left">Sair</button>
             </>
           ) : (

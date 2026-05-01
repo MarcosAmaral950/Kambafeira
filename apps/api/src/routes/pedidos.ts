@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { obterFornecedorId } from '../services/pecas'
+import { notificarNovoPedido, notificarStatusPedido } from '../services/whatsapp'
 
 const schemaCriarPedido = z.object({
   peca_id: z.string().uuid(),
@@ -44,6 +45,29 @@ export async function rotasPedidos(servidor: FastifyInstance) {
       [dados.peca_id, peca.fornecedor_id, req.usuarioId, dados.quantidade,
         peca.preco, precoTotal, dados.metodo_pagamento ?? null, dados.notas_comprador ?? null]
     )
+
+    // Notificar fornecedor via WhatsApp (não bloquear a resposta)
+    servidor.db.query(
+      `SELECT u.nome, u.telefone, f.whatsapp
+       FROM fornecedores f JOIN usuarios u ON f.usuario_id = u.id
+       WHERE f.id = $1`,
+      [peca.fornecedor_id]
+    ).then(async ({ rows: [forn] }) => {
+      const telForn = forn?.whatsapp || forn?.telefone
+      if (telForn) {
+        const { rows: [comprador] } = await servidor.db.query(
+          'SELECT nome FROM usuarios WHERE id = $1', [req.usuarioId]
+        )
+        notificarNovoPedido({
+          telefone: telForn,
+          nomeFornecedor: forn.nome,
+          pecaTitulo: peca.titulo,
+          compradorNome: comprador?.nome ?? 'Comprador',
+          precoTotal: String(precoTotal),
+          pedidoId: venda.id,
+        }).catch(() => {})
+      }
+    }).catch(() => {})
 
     reply.status(201)
     return venda
@@ -153,6 +177,25 @@ export async function rotasPedidos(servidor: FastifyInstance) {
         [dados.status, dados.notas_fornecedor ?? null,
           dados.motivo_cancelamento ?? null, req.usuarioPerfil, req.params.id]
       )
+
+      // Notificar comprador sobre novo estado (não bloqueia resposta)
+      servidor.db.query(
+        `SELECT u.nome, u.telefone, p.titulo AS peca_titulo
+         FROM usuarios u JOIN vendas v ON v.comprador_id = u.id
+         JOIN pecas p ON v.peca_id = p.id
+         WHERE v.id = $1`,
+        [req.params.id]
+      ).then(({ rows: [info] }) => {
+        if (info?.telefone) {
+          notificarStatusPedido({
+            telefone: info.telefone,
+            nomeUtilizador: info.nome,
+            pecaTitulo: info.peca_titulo,
+            novoStatus: dados.status,
+            pedidoId: req.params.id,
+          }).catch(() => {})
+        }
+      }).catch(() => {})
 
       // Quando entregue: calcular comissão e actualizar total_vendas
       if (dados.status === 'entregue') {
