@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Campo } from '@/components/ui/Campo'
 import { Botao } from '@/components/ui/Botao'
 import { api, ErroAPI } from '@/lib/api'
+import { useAuth } from '@/lib/auth-context'
 
 export default function PaginaLogin() {
   const router = useRouter()
+  const { recarregar } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [erro, setErro] = useState('')
@@ -19,8 +21,8 @@ export default function PaginaLogin() {
     setCarregando(true)
     try {
       await api.auth.login(email, password)
+      await recarregar()
       router.push('/')
-      router.refresh()
     } catch (err) {
       setErro(err instanceof ErroAPI ? err.message : 'Erro ao fazer login')
     } finally {

@@ -5,8 +5,8 @@ import { loginServico, registoCompradorServico, registoFornecedorServico } from 
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN ?? '7d'
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: true,
+  sameSite: 'none' as const,
   path: '/',
   maxAge: 60 * 60 * 24 * 7, // 7 dias em segundos
 }
@@ -70,8 +70,8 @@ export async function rotasAuth(servidor: FastifyInstance) {
         'SELECT id, email, perfil, nome, telefone, criado_em FROM usuarios WHERE id = $1',
         [req.usuarioId]
       )
-      if (!rows[0]) return { erro: 'Utilizador não encontrado' }
-      return { usuario: rows[0] }
+      if (!rows[0]) return reply.status(404).send({ erro: 'Utilizador não encontrado' })
+      return rows[0]
     }
   )
 }
