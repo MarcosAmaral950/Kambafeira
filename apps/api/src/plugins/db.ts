@@ -14,6 +14,7 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     max: 10,
     idleTimeoutMillis: 30000,
+    client_encoding: 'UTF8',
   })
 
   // Testar ligação ao arrancar
