@@ -33,7 +33,7 @@ servidor.setErrorHandler((erro, req, reply) => {
 
 async function iniciar() {
   await servidor.register(cors, {
-    origin: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000',
+    origin: process.env.WEB_URL ?? 'http://localhost:3000',
     credentials: true,
   })
 
