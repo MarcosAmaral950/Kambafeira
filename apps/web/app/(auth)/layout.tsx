@@ -5,7 +5,7 @@ export default function LayoutAuth({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 py-4">
+      <header className="bg-white border-b border-gray-200 pt-8 pb-5">
         <div className="max-w-md mx-auto px-4">
           <Link href="/">
             <Logo tamanho="sm" />
