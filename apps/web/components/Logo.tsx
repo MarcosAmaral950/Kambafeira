@@ -1,7 +1,7 @@
 import Image from 'next/image'
 
 const DIMENSOES = {
-  sm: { width: 112, height: 44  },
+  sm: { width: 108, height: 40  },
   md: { width: 220, height: 110 },
   lg: { width: 300, height: 150 },
 }

@@ -123,7 +123,7 @@ function Catalogo() {
   return (
     <>
       {/* Filtro de categorias */}
-      <div className="bg-white border-b border-gray-200 sticky top-14 z-40">
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-40">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex gap-2 overflow-x-auto py-3">
             {CATEGORIAS_FIXAS.map(cat => (
