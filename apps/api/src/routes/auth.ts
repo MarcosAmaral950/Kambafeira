@@ -65,7 +65,7 @@ export async function rotasAuth(servidor: FastifyInstance) {
   servidor.get(
     '/auth/me',
     { preHandler: [servidor.verificarToken] },
-    async (req) => {
+    async (req, reply) => {
       const { rows } = await servidor.db.query(
         'SELECT id, email, perfil, nome, telefone, criado_em FROM usuarios WHERE id = $1',
         [req.usuarioId]
