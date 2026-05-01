@@ -66,10 +66,10 @@ export default function PaginaAdmin() {
       {/* Atalhos rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { href: '/admin/fornecedores', icone: '🏪', label: 'Fornecedores' },
-          { href: '/admin/pedidos',      icone: '📦', label: 'Pedidos' },
-          { href: '/admin/chaves',       icone: '🔑', label: 'Chaves-convite' },
-          { href: '/',                   icone: '🌐', label: 'Ver site' },
+          { href: '/admin/fornecedores',  icone: '🏪', label: 'Fornecedores' },
+          { href: '/admin/utilizadores',  icone: '👥', label: 'Utilizadores' },
+          { href: '/admin/pedidos',       icone: '🛒', label: 'Pedidos' },
+          { href: '/admin/chaves',        icone: '🔑', label: 'Chaves-convite' },
         ].map(({ href, icone, label }) => (
           <Link key={href} href={href}
             className="bg-white border border-gray-200 rounded-xl p-4 hover:border-[#dc2626] transition-colors text-center">

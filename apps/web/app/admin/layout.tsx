@@ -27,12 +27,13 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
   if (!usuario || usuario.perfil !== 'admin') return null
 
   const navLinks = [
-    { href: '/admin',              label: 'Resumo',       icone: '📊' },
-    { href: '/admin/fornecedores', label: 'Fornecedores', icone: '🏪' },
-    { href: '/admin/pecas',        label: 'Peças',        icone: '🔧' },
-    { href: '/admin/stock',        label: 'Stock',        icone: '📦' },
-    { href: '/admin/pedidos',      label: 'Pedidos',      icone: '🛒' },
-    { href: '/admin/chaves',       label: 'Chaves',       icone: '🔑' },
+    { href: '/admin',                   label: 'Resumo',       icone: '📊' },
+    { href: '/admin/fornecedores',      label: 'Fornecedores', icone: '🏪' },
+    { href: '/admin/utilizadores',      label: 'Utilizadores', icone: '👥' },
+    { href: '/admin/pecas',             label: 'Peças',        icone: '🔧' },
+    { href: '/admin/stock',             label: 'Stock',        icone: '📦' },
+    { href: '/admin/pedidos',           label: 'Pedidos',      icone: '🛒' },
+    { href: '/admin/chaves',            label: 'Chaves',       icone: '🔑' },
   ]
 
   return (
