@@ -1,6 +1,6 @@
 'use client'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Logo } from '@/components/Logo'
@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo'
 export default function LayoutDashboard({ children }: { children: React.ReactNode }) {
   const { usuario, carregando } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!carregando && (!usuario || usuario.perfil === 'comprador')) {
@@ -28,7 +29,8 @@ export default function LayoutDashboard({ children }: { children: React.ReactNod
   const navLinks = [
     { href: '/dashboard',              label: 'Resumo',     icone: '📊' },
     { href: '/dashboard/pecas',        label: 'Peças',      icone: '🔧' },
-    { href: '/dashboard/pedidos',      label: 'Pedidos',    icone: '📦' },
+    { href: '/dashboard/stock',        label: 'Stock',      icone: '📦' },
+    { href: '/dashboard/pedidos',      label: 'Pedidos',    icone: '🛒' },
     { href: '/dashboard/avaliacoes',   label: 'Avaliações', icone: '⭐' },
   ]
 
@@ -43,16 +45,23 @@ export default function LayoutDashboard({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navLinks.map(({ href, label, icone }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-red-50 hover:text-[#dc2626] transition-colors"
-            >
-              <span>{icone}</span>
-              <span>{label}</span>
-            </Link>
-          ))}
+          {navLinks.map(({ href, label, icone }) => {
+            const activo = href === '/dashboard' ? pathname === href : pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activo
+                    ? 'bg-red-50 text-[#dc2626] font-medium'
+                    : 'text-gray-700 hover:bg-red-50 hover:text-[#dc2626]'
+                }`}
+              >
+                <span>{icone}</span>
+                <span>{label}</span>
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-4 border-t border-gray-100">
@@ -71,12 +80,15 @@ export default function LayoutDashboard({ children }: { children: React.ReactNod
 
       {/* Barra mobile */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex">
-        {navLinks.map(({ href, label, icone }) => (
-          <Link key={href} href={href} className="flex-1 flex flex-col items-center py-2 text-gray-600 hover:text-[#dc2626]">
-            <span className="text-lg">{icone}</span>
-            <span className="text-xs mt-0.5">{label}</span>
-          </Link>
-        ))}
+        {navLinks.map(({ href, label, icone }) => {
+          const activo = href === '/dashboard' ? pathname === href : pathname.startsWith(href)
+          return (
+            <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-2 ${activo ? 'text-[#dc2626]' : 'text-gray-600 hover:text-[#dc2626]'}`}>
+              <span className="text-lg">{icone}</span>
+              <span className="text-xs mt-0.5">{label}</span>
+            </Link>
+          )
+        })}
       </nav>
 
       {/* Conteúdo principal */}

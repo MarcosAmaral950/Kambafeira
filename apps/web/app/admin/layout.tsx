@@ -1,6 +1,6 @@
 'use client'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Logo } from '@/components/Logo'
@@ -8,6 +8,7 @@ import { Logo } from '@/components/Logo'
 export default function LayoutAdmin({ children }: { children: React.ReactNode }) {
   const { usuario, carregando } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!carregando && (!usuario || usuario.perfil !== 'admin')) {
@@ -28,7 +29,9 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
   const navLinks = [
     { href: '/admin',              label: 'Resumo',       icone: '📊' },
     { href: '/admin/fornecedores', label: 'Fornecedores', icone: '🏪' },
-    { href: '/admin/pedidos',      label: 'Pedidos',      icone: '📦' },
+    { href: '/admin/pecas',        label: 'Peças',        icone: '🔧' },
+    { href: '/admin/stock',        label: 'Stock',        icone: '📦' },
+    { href: '/admin/pedidos',      label: 'Pedidos',      icone: '🛒' },
     { href: '/admin/chaves',       label: 'Chaves',       icone: '🔑' },
   ]
 
@@ -45,16 +48,23 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {navLinks.map(({ href, label, icone }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-            >
-              <span>{icone}</span>
-              <span>{label}</span>
-            </Link>
-          ))}
+          {navLinks.map(({ href, label, icone }) => {
+            const activo = href === '/admin' ? pathname === href : pathname.startsWith(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activo
+                    ? 'bg-gray-800 text-white font-medium'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                <span>{icone}</span>
+                <span>{label}</span>
+              </Link>
+            )
+          })}
         </nav>
 
         <div className="p-4 border-t border-gray-800">
@@ -64,12 +74,15 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
 
       {/* Barra mobile */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-[#111111] border-t border-gray-800 z-40 flex">
-        {navLinks.map(({ href, label, icone }) => (
-          <Link key={href} href={href} className="flex-1 flex flex-col items-center py-2 text-gray-400 hover:text-white">
-            <span className="text-lg">{icone}</span>
-            <span className="text-xs mt-0.5">{label}</span>
-          </Link>
-        ))}
+        {navLinks.map(({ href, label, icone }) => {
+          const activo = href === '/admin' ? pathname === href : pathname.startsWith(href)
+          return (
+            <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-2 ${activo ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
+              <span className="text-lg">{icone}</span>
+              <span className="text-xs mt-0.5">{label}</span>
+            </Link>
+          )
+        })}
       </nav>
 
       <main className="sm:ml-56 min-h-screen pb-20 sm:pb-0">

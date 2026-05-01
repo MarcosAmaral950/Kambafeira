@@ -1,5 +1,5 @@
 import { Pool } from 'pg'
-import type { CriarPecaInput, EditarPecaInput, FiltrosPecasInput, AtualizarEstoqueInput } from '../schemas/pecas'
+import type { CriarPecaInput, EditarPecaInput, FiltrosPecasInput, AtualizarEstoqueInput, AjusteEstoqueInput } from '../schemas/pecas'
 
 export async function obterFornecedorId(db: Pool, usuarioId: string): Promise<string> {
   const { rows } = await db.query(
@@ -194,12 +194,14 @@ export async function obterPecaFornecedorServico(db: Pool, id: string, fornecedo
 export async function atualizarEstoqueServico(
   db: Pool, id: string, fornecedorId: string, dados: AtualizarEstoqueInput
 ) {
-  // Verificar que a peça pertence ao fornecedor e não está removida
+  // Verificar que a peça pertence ao fornecedor e não está removida (incluir estoque para registo de movimento)
   const { rows: existente } = await db.query(
-    "SELECT id FROM pecas WHERE id = $1 AND fornecedor_id = $2 AND status != 'removido'",
+    "SELECT id, estoque, fornecedor_id FROM pecas WHERE id = $1 AND fornecedor_id = $2 AND status != 'removido'",
     [id, fornecedorId]
   )
   if (!existente[0]) throw { statusCode: 404, message: 'Peça não encontrada' }
+
+  const estoqueAnterior: number = existente[0].estoque
 
   // Construir SET dinâmico apenas com os campos fornecidos
   const setCampos: string[] = []
@@ -229,5 +231,151 @@ export async function atualizarEstoqueServico(
     `UPDATE pecas SET ${setCampos.join(', ')} WHERE id = $1 RETURNING id, estoque, preco, status`,
     valores
   )
+
+  // Registar movimento de estoque se o estoque foi alterado
+  if (dados.estoque !== undefined && dados.estoque !== estoqueAnterior) {
+    await registarMovimento(db, {
+      pecaId: id,
+      fornecedorId,
+      tipo: 'correcao',
+      quantidadeAnterior: estoqueAnterior,
+      quantidadeNova: dados.estoque,
+    })
+  }
+
   return rows[0]
+}
+
+// ── Helper interno: registar um movimento de estoque ──────────────────────────
+async function registarMovimento(db: Pool, params: {
+  pecaId: string
+  fornecedorId: string
+  tipo: string
+  quantidadeAnterior: number
+  quantidadeNova: number
+  motivo?: string
+  vendaId?: string
+  criadoPor?: string
+}) {
+  await db.query(
+    `INSERT INTO movimentos_estoque
+       (peca_id, fornecedor_id, tipo, quantidade_anterior, quantidade_nova, variacao, motivo, venda_id, criado_por)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [
+      params.pecaId, params.fornecedorId, params.tipo,
+      params.quantidadeAnterior, params.quantidadeNova,
+      params.quantidadeNova - params.quantidadeAnterior,
+      params.motivo ?? null, params.vendaId ?? null, params.criadoPor ?? null,
+    ]
+  )
+}
+
+// ── Ajuste manual de stock com motivo ─────────────────────────────────────────
+export async function ajustarEstoqueServico(
+  db: Pool,
+  pecaId: string,
+  fornecedorId: string,
+  dados: AjusteEstoqueInput,
+  criadoPor: string
+) {
+  const { rows: [peca] } = await db.query(
+    `SELECT id, estoque, fornecedor_id FROM pecas WHERE id = $1 AND fornecedor_id = $2 AND status != 'removido'`,
+    [pecaId, fornecedorId]
+  )
+  if (!peca) throw { statusCode: 404, message: 'Peça não encontrada' }
+
+  const qtdAnterior: number = peca.estoque
+  const qtdNova = dados.estoque
+
+  await db.query('UPDATE pecas SET estoque = $1 WHERE id = $2', [qtdNova, pecaId])
+
+  await registarMovimento(db, {
+    pecaId,
+    fornecedorId,
+    tipo: dados.tipo,
+    quantidadeAnterior: qtdAnterior,
+    quantidadeNova: qtdNova,
+    motivo: dados.observacao,
+    criadoPor,
+  })
+
+  return { id: peca.id as string, estoque: qtdNova, variacao: qtdNova - qtdAnterior }
+}
+
+// ── Listagem de stock do fornecedor ───────────────────────────────────────────
+export async function listarStockFornecedor(db: Pool, fornecedorId: string) {
+  const { rows } = await db.query(
+    `SELECT
+       p.id, p.titulo, p.foto_principal, p.estoque, p.preco, p.status,
+       p.marca_veiculo, p.modelo_veiculo,
+       (SELECT MAX(v.criada_em) FROM vendas v WHERE v.peca_id = p.id) AS ultima_venda,
+       COALESCE((SELECT SUM(v.quantidade) FROM vendas v WHERE v.peca_id = p.id AND v.status != 'cancelado'), 0) AS total_vendido,
+       (SELECT m.criado_em FROM movimentos_estoque m WHERE m.peca_id = p.id ORDER BY m.criado_em DESC LIMIT 1) AS ultimo_movimento,
+       (SELECT m.tipo FROM movimentos_estoque m WHERE m.peca_id = p.id ORDER BY m.criado_em DESC LIMIT 1) AS ultimo_movimento_tipo
+     FROM pecas p
+     WHERE p.fornecedor_id = $1 AND p.status != 'removido'
+     ORDER BY p.estoque ASC, p.titulo ASC`,
+    [fornecedorId]
+  )
+  return rows
+}
+
+// ── Histórico de movimentos de uma peça ───────────────────────────────────────
+export async function listarMovimentosPeca(db: Pool, pecaId: string, fornecedorId: string) {
+  const { rows } = await db.query(
+    `SELECT
+       m.id, m.tipo, m.quantidade_anterior, m.quantidade_nova, m.variacao,
+       m.motivo, m.criado_em,
+       u.nome AS criado_por_nome
+     FROM movimentos_estoque m
+     LEFT JOIN usuarios u ON m.criado_por = u.id
+     WHERE m.peca_id = $1 AND m.fornecedor_id = $2
+     ORDER BY m.criado_em DESC
+     LIMIT 50`,
+    [pecaId, fornecedorId]
+  )
+  return rows
+}
+
+// ── Stock de todos os fornecedores (admin) ────────────────────────────────────
+export async function listarStockAdmin(db: Pool, fornecedorIdFiltro?: string) {
+  const condicao = fornecedorIdFiltro ? 'AND p.fornecedor_id = $1' : ''
+  const params   = fornecedorIdFiltro ? [fornecedorIdFiltro] : []
+  const { rows } = await db.query(
+    `SELECT
+       p.id, p.titulo, p.foto_principal, p.estoque, p.preco, p.status,
+       p.marca_veiculo, p.fornecedor_id,
+       u.nome AS fornecedor_nome,
+       COALESCE((SELECT SUM(v.quantidade) FROM vendas v WHERE v.peca_id = p.id AND v.status != 'cancelado'), 0) AS total_vendido,
+       (SELECT MAX(v.criada_em) FROM vendas v WHERE v.peca_id = p.id) AS ultima_venda
+     FROM pecas p
+     JOIN fornecedores f ON f.id = p.fornecedor_id
+     JOIN usuarios u ON u.id = f.usuario_id
+     WHERE p.status != 'removido' ${condicao}
+     ORDER BY p.estoque ASC, u.nome, p.titulo`,
+    params
+  )
+  return rows
+}
+
+// ── Listar todas as peças para o admin ────────────────────────────────────────
+export async function listarTodasPecasAdmin(db: Pool, fornecedorIdFiltro?: string) {
+  const condicao = fornecedorIdFiltro ? 'AND p.fornecedor_id = $1' : ''
+  const params   = fornecedorIdFiltro ? [fornecedorIdFiltro] : []
+  const { rows } = await db.query(
+    `SELECT
+       p.id, p.titulo, p.preco, p.status, p.estoque, p.condicao,
+       p.foto_principal, p.marca_veiculo, p.modelo_veiculo, p.criada_em,
+       p.fornecedor_id,
+       u.nome AS fornecedor_nome,
+       c.nome AS categoria
+     FROM pecas p
+     JOIN fornecedores f ON f.id = p.fornecedor_id
+     JOIN usuarios u ON u.id = f.usuario_id
+     JOIN categorias c ON c.id = p.categoria_id
+     WHERE p.status != 'removido' ${condicao}
+     ORDER BY p.criada_em DESC`,
+    params
+  )
+  return rows
 }

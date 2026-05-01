@@ -123,6 +123,19 @@ export const api = {
     pedidos:      ()                => apiFetch('/admin/pedidos'),
     chaves:       ()                => apiFetch('/admin/chaves'),
     gerarChave:   ()                => apiFetch('/admin/chaves', { metodo: 'POST' }),
+    pecasAdmin:       (fornecedorId?: string) => apiFetch(`/admin/pecas${fornecedorId ? `?fornecedor_id=${fornecedorId}` : ''}`),
+    fornecedoresLista: ()                     => apiFetch('/admin/fornecedores-lista'),
+    criarPecaAdmin:   (dados: object)         => apiFetch('/pecas', { metodo: 'POST', corpo: dados }),
+  },
+
+  // ── Stock ─────────────────────────────────────────────────────
+  stock: {
+    doFornecedor:    ()                                => apiFetch('/fornecedor/stock'),
+    ajustar:         (pecaId: string, dados: object)   => apiFetch(`/fornecedor/stock/${pecaId}`, { metodo: 'PATCH', corpo: dados }),
+    movimentos:      (pecaId: string)                  => apiFetch(`/fornecedor/stock/${pecaId}/movimentos`),
+    admin:           (fornecedorId?: string)           => apiFetch(`/admin/stock${fornecedorId ? `?fornecedor_id=${fornecedorId}` : ''}`),
+    ajustarAdmin:    (pecaId: string, dados: object)   => apiFetch(`/admin/stock/${pecaId}`, { metodo: 'PATCH', corpo: dados }),
+    movimentosAdmin: (pecaId: string)                  => apiFetch(`/admin/stock/${pecaId}/movimentos`),
   },
 
   // ── Upload de ficheiros ───────────────────────────────────────

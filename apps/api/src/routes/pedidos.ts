@@ -46,6 +46,31 @@ export async function rotasPedidos(servidor: FastifyInstance) {
         peca.preco, precoTotal, dados.metodo_pagamento ?? null, dados.notas_comprador ?? null]
     )
 
+    // Debitar stock atomicamente (proteção contra race conditions)
+    const { rows: [estoqueAtualizado] } = await servidor.db.query(
+      `UPDATE pecas SET estoque = estoque - $1 WHERE id = $2 AND estoque >= $1 RETURNING estoque, fornecedor_id`,
+      [dados.quantidade, dados.peca_id]
+    )
+    if (!estoqueAtualizado) {
+      // Race condition: stock esgotou entre a verificação e o UPDATE
+      await servidor.db.query('DELETE FROM vendas WHERE id = $1', [venda.id])
+      return reply.status(400).send({ erro: 'Estoque insuficiente. Tente novamente.' })
+    }
+
+    // Registar movimento de stock (não bloquear resposta)
+    servidor.db.query(
+      `INSERT INTO movimentos_estoque
+         (peca_id, fornecedor_id, tipo, quantidade_anterior, quantidade_nova, variacao, venda_id, criado_por)
+       VALUES ($1,$2,'venda_plataforma',$3,$4,$5,$6,$7)`,
+      [
+        dados.peca_id, estoqueAtualizado.fornecedor_id,
+        estoqueAtualizado.estoque + dados.quantidade,
+        estoqueAtualizado.estoque,
+        -dados.quantidade,
+        venda.id, req.usuarioId,
+      ]
+    ).catch(() => {})
+
     // Notificar fornecedor via WhatsApp (não bloquear a resposta)
     servidor.db.query(
       `SELECT u.nome, u.telefone, f.whatsapp
@@ -177,6 +202,28 @@ export async function rotasPedidos(servidor: FastifyInstance) {
         [dados.status, dados.notas_fornecedor ?? null,
           dados.motivo_cancelamento ?? null, req.usuarioPerfil, req.params.id]
       )
+
+      // Restaurar stock quando cancelado (apenas se ainda não estava cancelado)
+      if (dados.status === 'cancelado' && venda.status !== 'cancelado') {
+        const { rows: [pecaAtualizada] } = await servidor.db.query(
+          `UPDATE pecas SET estoque = estoque + $1 WHERE id = $2 RETURNING estoque, fornecedor_id`,
+          [venda.quantidade, venda.peca_id]
+        )
+        if (pecaAtualizada) {
+          servidor.db.query(
+            `INSERT INTO movimentos_estoque
+               (peca_id, fornecedor_id, tipo, quantidade_anterior, quantidade_nova, variacao, venda_id, criado_por)
+             VALUES ($1,$2,'cancelamento',$3,$4,$5,$6,$7)`,
+            [
+              venda.peca_id, pecaAtualizada.fornecedor_id,
+              pecaAtualizada.estoque - venda.quantidade,
+              pecaAtualizada.estoque,
+              venda.quantidade,
+              venda.id, req.usuarioId,
+            ]
+          ).catch(() => {})
+        }
+      }
 
       // Notificar comprador sobre novo estado (não bloqueia resposta)
       servidor.db.query(

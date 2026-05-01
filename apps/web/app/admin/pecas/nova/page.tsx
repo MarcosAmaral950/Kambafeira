@@ -7,14 +7,17 @@ import { UploadFotos } from '@/components/ui/UploadFotos'
 import { api, ErroAPI } from '@/lib/api'
 
 type Categoria = { id: string; nome: string }
+type FornecedorOpcao = { id: string; nome: string }
 
-export default function PaginaNovaPeca() {
+export default function PaginaNovaPecaAdmin() {
   const router = useRouter()
   const [categorias, setCategorias] = useState<Categoria[]>([])
+  const [fornecedores, setFornecedores] = useState<FornecedorOpcao[]>([])
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState('')
 
   const [form, setForm] = useState({
+    fornecedor_id: '',
     categoria_id: '',
     titulo: '',
     descricao: '',
@@ -31,7 +34,13 @@ export default function PaginaNovaPeca() {
   })
 
   useEffect(() => {
-    api.categorias.listar().then(d => setCategorias(d as Categoria[]))
+    Promise.all([
+      api.categorias.listar(),
+      api.admin.fornecedoresLista(),
+    ]).then(([cats, forns]) => {
+      setCategorias(cats as Categoria[])
+      setFornecedores(forns as FornecedorOpcao[])
+    }).catch(() => {})
   }, [])
 
   function atualizar(campo: string, valor: string) {
@@ -45,25 +54,38 @@ export default function PaginaNovaPeca() {
   async function submeter(e: FormEvent) {
     e.preventDefault()
     setErro('')
+
+    if (!form.fornecedor_id) {
+      setErro('Seleccione um fornecedor')
+      return
+    }
+
     setCarregando(true)
     try {
-      // A foto principal é sempre a primeira do array
       const foto_principal = form.fotos[0] ?? undefined
 
       const dados = {
-        ...form,
-        preco:           parseFloat(form.preco),
-        estoque:         parseInt(form.estoque),
-        ano_veiculo_de:  form.ano_veiculo_de  ? parseInt(form.ano_veiculo_de)  : undefined,
+        fornecedor_id:  form.fornecedor_id,
+        categoria_id:   form.categoria_id,
+        titulo:         form.titulo,
+        descricao:      form.descricao,
+        preco:          parseFloat(form.preco),
+        condicao:       form.condicao,
+        marca_veiculo:  form.marca_veiculo || undefined,
+        modelo_veiculo: form.modelo_veiculo || undefined,
+        ano_veiculo_de: form.ano_veiculo_de ? parseInt(form.ano_veiculo_de) : undefined,
         ano_veiculo_ate: form.ano_veiculo_ate ? parseInt(form.ano_veiculo_ate) : undefined,
-        numero_parte:    form.numero_parte || undefined,
+        numero_parte:   form.numero_parte || undefined,
+        estoque:        parseInt(form.estoque),
+        fotos:          form.fotos,
         foto_principal,
-        fotos:           form.fotos,
+        status:         form.status,
       }
-      await api.pecas.criar(dados)
-      router.push('/dashboard/pecas')
+
+      await api.admin.criarPecaAdmin(dados)
+      router.push('/admin/pecas')
     } catch (err) {
-      setErro(err instanceof ErroAPI ? err.message : 'Erro ao publicar peça')
+      setErro(err instanceof ErroAPI ? err.message : 'Erro ao criar peça')
     } finally {
       setCarregando(false)
     }
@@ -73,10 +95,26 @@ export default function PaginaNovaPeca() {
     <div className="p-4 sm:p-6 max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} className="text-gray-400 hover:text-gray-600">←</button>
-        <h1 className="text-xl font-bold text-[#111111]">Nova Peça</h1>
+        <h1 className="text-xl font-bold text-[#111111]">Cadastrar Peça (Admin)</h1>
       </div>
 
       <form onSubmit={submeter} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+
+        {/* Fornecedor — campo obrigatório para admin */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Fornecedor *</label>
+          <select
+            value={form.fornecedor_id}
+            onChange={e => atualizar('fornecedor_id', e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#dc2626]"
+          >
+            <option value="">Seleccionar fornecedor…</option>
+            {fornecedores.map(f => (
+              <option key={f.id} value={f.id}>{f.nome}</option>
+            ))}
+          </select>
+        </div>
 
         {/* Categoria */}
         <div>
@@ -114,7 +152,6 @@ export default function PaginaNovaPeca() {
           <Campo label="Preço (Kz) *" type="number" value={form.preco}
             onChange={e => atualizar('preco', e.target.value)}
             placeholder="5000" required />
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Condição *</label>
             <select
@@ -177,7 +214,7 @@ export default function PaginaNovaPeca() {
         )}
 
         <Botao type="submit" carregando={carregando}>
-          Publicar Peça
+          Cadastrar Peça
         </Botao>
       </form>
     </div>

@@ -10,8 +10,8 @@ type Categoria = { id: string; nome: string }
 type Peca = {
   id: string; titulo: string; descricao: string; preco: string; condicao: string
   categoria_id: string; marca_veiculo?: string; modelo_veiculo?: string
-  ano_veiculo_de?: number; estoque: number; foto_principal?: string
-  fotos: string[]; status: string
+  ano_veiculo_de?: number; ano_veiculo_ate?: number; numero_parte?: string
+  estoque: number; foto_principal?: string; fotos: string[]; status: string
 }
 
 export default function PaginaEditarPeca() {
@@ -26,6 +26,7 @@ export default function PaginaEditarPeca() {
   const [form, setForm] = useState({
     categoria_id: '', titulo: '', descricao: '', preco: '', condicao: 'bom',
     marca_veiculo: '', modelo_veiculo: '', ano_veiculo_de: '',
+    ano_veiculo_ate: '', numero_parte: '',
     estoque: '1', fotos: [] as string[], status: 'activo',
   })
 
@@ -45,17 +46,19 @@ export default function PaginaEditarPeca() {
       }
 
       setForm({
-        categoria_id:   p.categoria_id ?? '',
-        titulo:         p.titulo,
-        descricao:      p.descricao,
-        preco:          p.preco,
-        condicao:       p.condicao,
-        marca_veiculo:  p.marca_veiculo ?? '',
-        modelo_veiculo: p.modelo_veiculo ?? '',
-        ano_veiculo_de: p.ano_veiculo_de?.toString() ?? '',
-        estoque:        p.estoque.toString(),
-        fotos:          fotosNormalizadas,
-        status:         p.status,
+        categoria_id:    p.categoria_id ?? '',
+        titulo:          p.titulo,
+        descricao:       p.descricao,
+        preco:           p.preco,
+        condicao:        p.condicao,
+        marca_veiculo:   p.marca_veiculo ?? '',
+        modelo_veiculo:  p.modelo_veiculo ?? '',
+        ano_veiculo_de:  p.ano_veiculo_de?.toString() ?? '',
+        ano_veiculo_ate: p.ano_veiculo_ate?.toString() ?? '',
+        numero_parte:    p.numero_parte ?? '',
+        estoque:         p.estoque.toString(),
+        fotos:           fotosNormalizadas,
+        status:          p.status,
       })
     }).finally(() => setACarregar(false))
   }, [id])
@@ -78,11 +81,13 @@ export default function PaginaEditarPeca() {
 
       await api.pecas.editar(id, {
         ...form,
-        preco:          parseFloat(form.preco),
-        estoque:        parseInt(form.estoque),
-        ano_veiculo_de: form.ano_veiculo_de ? parseInt(form.ano_veiculo_de) : undefined,
+        preco:           parseFloat(form.preco),
+        estoque:         parseInt(form.estoque),
+        ano_veiculo_de:  form.ano_veiculo_de  ? parseInt(form.ano_veiculo_de)  : undefined,
+        ano_veiculo_ate: form.ano_veiculo_ate ? parseInt(form.ano_veiculo_ate) : undefined,
+        numero_parte:    form.numero_parte || undefined,
         foto_principal,
-        fotos:          form.fotos,
+        fotos:           form.fotos,
       })
       router.push('/dashboard/pecas')
     } catch (err) {
@@ -148,8 +153,18 @@ export default function PaginaEditarPeca() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Campo label="Ano" type="number" value={form.ano_veiculo_de}
-            onChange={e => atualizar('ano_veiculo_de', e.target.value)} />
+          <Campo label="Ano do veículo" type="number" value={form.ano_veiculo_de}
+            onChange={e => atualizar('ano_veiculo_de', e.target.value)}
+            placeholder="2018" />
+          <Campo label="Ano até" type="number" value={form.ano_veiculo_ate}
+            onChange={e => atualizar('ano_veiculo_ate', e.target.value)}
+            placeholder="2023" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Campo label="Número de parte / OEM" value={form.numero_parte}
+            onChange={e => atualizar('numero_parte', e.target.value)}
+            placeholder="Ex: 06A-103-601" />
           <Campo label="Estoque" type="number" value={form.estoque}
             onChange={e => atualizar('estoque', e.target.value)} required />
         </div>

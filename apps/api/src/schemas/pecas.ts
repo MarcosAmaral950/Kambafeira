@@ -40,7 +40,14 @@ export const schemaFiltrosPecas = z.object({
   limite: z.coerce.number().int().min(1).max(50).default(20),
 })
 
+export const schemaAjusteEstoque = z.object({
+  estoque: z.number().int().min(0, 'Estoque não pode ser negativo'),
+  tipo: z.enum(['venda_externa', 'stock_recebido', 'correcao', 'dano_perda']),
+  observacao: z.string().max(500).optional(),
+})
+
 export type CriarPecaInput = z.infer<typeof schemaCriarPeca>
 export type EditarPecaInput = z.infer<typeof schemaEditarPeca>
 export type FiltrosPecasInput = z.infer<typeof schemaFiltrosPecas>
 export type AtualizarEstoqueInput = z.infer<typeof schemaAtualizarEstoque>
+export type AjusteEstoqueInput = z.infer<typeof schemaAjusteEstoque>

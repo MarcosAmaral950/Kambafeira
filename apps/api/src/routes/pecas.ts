@@ -4,6 +4,7 @@ import {
   criarPecaServico, listarPecasServico, obterPecaServico,
   editarPecaServico, removerPecaServico, pecasFornecedorServico,
   obterFornecedorId, obterPecaFornecedorServico, atualizarEstoqueServico,
+  listarTodasPecasAdmin,
 } from '../services/pecas'
 
 export async function rotasPecas(servidor: FastifyInstance) {
@@ -50,16 +51,58 @@ export async function rotasPecas(servidor: FastifyInstance) {
     }
   )
 
-  // POST /pecas — criar peça (fornecedor)
+  // POST /pecas — criar peça (fornecedor ou admin em nome de fornecedor)
   servidor.post(
     '/pecas',
-    { preHandler: [servidor.apenasFornecedor] },
+    { preHandler: [servidor.verificarToken] },
     async (req, reply) => {
+      let fornecedorId: string
+
+      if (req.usuarioPerfil === 'admin') {
+        // Admin passa fornecedor_id no body
+        const body = req.body as { fornecedor_id?: string }
+        if (!body.fornecedor_id) {
+          return reply.status(400).send({ erro: 'fornecedor_id obrigatório para admin' })
+        }
+        // Verificar que o fornecedor existe
+        const { rows: [forn] } = await servidor.db.query(
+          `SELECT id FROM fornecedores WHERE id = $1`,
+          [body.fornecedor_id]
+        )
+        if (!forn) return reply.status(404).send({ erro: 'Fornecedor não encontrado' })
+        fornecedorId = body.fornecedor_id
+      } else if (req.usuarioPerfil === 'fornecedor') {
+        fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
+      } else {
+        return reply.status(403).send({ erro: 'Sem permissão' })
+      }
+
       const dados = schemaCriarPeca.parse(req.body)
-      const fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
       const peca = await criarPecaServico(servidor.db, fornecedorId, dados)
       reply.status(201)
       return peca
+    }
+  )
+
+  // GET /admin/pecas — listar todas as peças (admin)
+  servidor.get(
+    '/admin/pecas',
+    { preHandler: [servidor.apenasAdmin] },
+    async (req) => {
+      const fornecedorId = (req.query as { fornecedor_id?: string }).fornecedor_id
+      return listarTodasPecasAdmin(servidor.db, fornecedorId)
+    }
+  )
+
+  // GET /admin/fornecedores-lista — lista simples para dropdown
+  servidor.get(
+    '/admin/fornecedores-lista',
+    { preHandler: [servidor.apenasAdmin] },
+    async () => {
+      const { rows } = await servidor.db.query(
+        `SELECT f.id, u.nome FROM fornecedores f JOIN usuarios u ON u.id = f.usuario_id WHERE f.suspenso = false ORDER BY u.nome`
+      )
+      return rows
     }
   )
 
