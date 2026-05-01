@@ -61,6 +61,9 @@ export function Header() {
                 </div>
                 <span className="text-gray-700 font-medium max-w-[120px] truncate">{usuario.nome.split(' ')[0]}</span>
               </div>
+              <Link href="/perfil" className="text-gray-600 hover:text-[#dc2626] text-sm transition-colors">
+                Perfil
+              </Link>
               <button
                 onClick={sair}
                 className="text-gray-400 hover:text-red-600 transition-colors text-xs"
@@ -134,6 +137,9 @@ export function Header() {
                   Painel admin
                 </Link>
               )}
+              <Link href="/perfil" className="text-sm text-gray-700 py-1" onClick={() => setMenuAberto(false)}>
+                O meu perfil
+              </Link>
               <button onClick={sair} className="text-sm text-red-600 py-1 text-left">Sair</button>
             </>
           ) : (

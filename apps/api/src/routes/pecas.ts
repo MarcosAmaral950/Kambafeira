@@ -161,4 +161,19 @@ export async function rotasPecas(servidor: FastifyInstance) {
     )
     return rows
   })
+
+  // GET /fornecedores/:id — perfil público de um fornecedor
+  servidor.get<{ Params: { id: string } }>('/fornecedores/:id', async (req, reply) => {
+    const { rows: [forn] } = await servidor.db.query(
+      `SELECT f.id, f.nome_empresa, f.tipo, f.descricao, f.provincia, f.municipio, f.bairro,
+              f.avaliacao_media, f.total_avaliacoes, f.total_vendas, f.verificado,
+              u.nome AS responsavel_nome
+       FROM fornecedores f
+       JOIN usuarios u ON u.id = f.usuario_id
+       WHERE f.id = $1 AND f.suspenso = false`,
+      [req.params.id]
+    )
+    if (!forn) return reply.status(404).send({ erro: 'Fornecedor não encontrado' })
+    return forn
+  })
 }

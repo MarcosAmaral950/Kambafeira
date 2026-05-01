@@ -93,6 +93,26 @@ export async function rotasAdmin(servidor: FastifyInstance) {
     return rows
   })
 
+  // PUT /admin/usuarios/:id/reset-password — admin repõe a password de qualquer utilizador
+  servidor.put<{ Params: { id: string } }>(
+    '/admin/usuarios/:id/reset-password',
+    { preHandler: [servidor.apenasAdmin] },
+    async (req, reply) => {
+      const { password_nova } = req.body as { password_nova: string }
+      if (!password_nova || password_nova.length < 8) {
+        return reply.status(400).send({ erro: 'Password deve ter pelo menos 8 caracteres' })
+      }
+      const bcrypt = await import('bcrypt')
+      const hash = await bcrypt.hash(password_nova, 10)
+      const { rows: [u] } = await servidor.db.query(
+        'UPDATE usuarios SET password_hash = $1 WHERE id = $2 RETURNING id, nome, email',
+        [hash, req.params.id]
+      )
+      if (!u) return reply.status(404).send({ erro: 'Utilizador não encontrado' })
+      return { mensagem: `Password de ${u.nome as string} reposta com sucesso` }
+    }
+  )
+
   // GET /admin/pedidos — todos os pedidos da plataforma
   servidor.get('/admin/pedidos', { preHandler: [servidor.apenasAdmin] }, async () => {
     const { rows } = await servidor.db.query(

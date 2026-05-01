@@ -1,9 +1,14 @@
 import { FastifyInstance } from 'fastify'
 import bcrypt from 'bcrypt'
 
-// Endpoint temporário de seed — remover após uso
+// Endpoint de seed — protegido em produção
 export async function rotasSeed(servidor: FastifyInstance) {
   servidor.post('/seed/reset', async (req, reply) => {
+    // Bloquear em produção a menos que explicitamente habilitado
+    if (process.env.NODE_ENV === 'production' && process.env.SEED_HABILITADO !== 'true') {
+      return reply.status(404).send({ erro: 'Não encontrado' })
+    }
+
     const chaveSecreta = (req.query as { chave?: string }).chave
     if (chaveSecreta !== 'kamba2026seed') {
       return reply.status(403).send({ erro: 'Não autorizado' })

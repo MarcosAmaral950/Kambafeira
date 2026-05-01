@@ -37,6 +37,7 @@ export const schemaFiltrosPecas = z.object({
   preco_max: z.coerce.number().optional(),
   q: z.string().optional(),
   fornecedor_id: z.string().uuid().optional(),
+  provincia: z.string().optional(),
   pagina: z.coerce.number().int().min(1).default(1),
   limite: z.coerce.number().int().min(1).max(50).default(20),
 })

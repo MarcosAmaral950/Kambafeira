@@ -73,6 +73,10 @@ export const api = {
       return apiFetch('/auth/logout', { metodo: 'POST' })
     },
     me: () => apiFetch('/auth/me'),
+    alterarPassword: (dados: { password_actual: string; password_nova: string }) =>
+      apiFetch('/auth/alterar-password', { metodo: 'PUT', corpo: dados }),
+    actualizarPerfil: (dados: { nome: string; telefone?: string }) =>
+      apiFetch('/auth/me/actualizar', { metodo: 'PUT', corpo: dados }),
   },
 
   // ── Peças ─────────────────────────────────────────────────────
@@ -131,6 +135,8 @@ export const api = {
     criarPecaAdmin:   (dados: object)         => apiFetch('/pecas', { metodo: 'POST', corpo: dados }),
     suspenderPeca: (id: string, status: string) =>
       apiFetch(`/admin/pecas/${id}/status`, { metodo: 'PATCH', corpo: { status } }),
+    resetarPassword: (id: string, password_nova: string) =>
+      apiFetch(`/admin/usuarios/${id}/reset-password`, { metodo: 'PUT', corpo: { password_nova } }),
     compradores: () => apiFetch('/admin/compradores'),
     pedidoManual: (dados: { peca_id: string; comprador_id: string; quantidade: number; notas_comprador?: string; metodo_pagamento?: string }) =>
       apiFetch('/pedidos', { metodo: 'POST', corpo: dados }),
@@ -164,6 +170,11 @@ export const api = {
       if (!res.ok) throw new ErroAPI(res.status, dados.erro ?? 'Erro no upload')
       return dados as { url: string; public_id: string }
     },
+  },
+
+  // ── Fornecedores (público) ────────────────────────────────────
+  fornecedores: {
+    obter: (id: string) => apiFetch(`/fornecedores/${id}`),
   },
 
   // ── Avaliações ────────────────────────────────────────────────

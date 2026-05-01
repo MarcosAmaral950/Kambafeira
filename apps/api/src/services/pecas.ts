@@ -69,6 +69,10 @@ export async function listarPecasServico(db: Pool, filtros: FiltrosPecasInput) {
     condicoes.push(`p.fornecedor_id = $${i++}`)
     params.push(filtros.fornecedor_id)
   }
+  if (filtros.provincia) {
+    condicoes.push(`LOWER(f.provincia) = $${i++}`)
+    params.push(filtros.provincia.toLowerCase())
+  }
 
   const onde = condicoes.join(' AND ')
   const offset = (filtros.pagina - 1) * filtros.limite

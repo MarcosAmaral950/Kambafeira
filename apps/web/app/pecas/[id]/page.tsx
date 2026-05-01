@@ -768,7 +768,7 @@ export default function PaginaDetalhe({ params }: { params: { id: string } }) {
 
                   {/* Ver mais deste fornecedor */}
                   <Link
-                    href={`/?fornecedor_id=${peca.fornecedor_id}`}
+                    href={`/fornecedores/${peca.fornecedor_id}`}
                     className="text-center text-sm text-[#dc2626] hover:underline py-1"
                   >
                     Ver mais peças de {peca.fornecedor_nome} →

@@ -36,6 +36,33 @@ export default function PaginaFornecedoresAdmin() {
     }
   }
 
+  async function reporPassword(f: Fornecedor) {
+    const novaPwd = prompt(`Nova password para ${f.nome}:\n(mínimo 8 caracteres)`)
+    if (!novaPwd) return
+    if (novaPwd.length < 8) {
+      alert('A password deve ter pelo menos 8 caracteres')
+      return
+    }
+    try {
+      // O endpoint usa o id do utilizador (não do fornecedor)
+      // A API /admin/fornecedores devolve o campo fornecedor_id separado — aqui usamos o id do utilizador
+      // que está no campo implícito; vamos usar a rota com o id do utilizador via /admin/usuarios
+      // Nota: o id em Fornecedor é o id do perfil de fornecedor; para reset de password precisamos do id do utilizador.
+      // A API /admin/fornecedores devolve u.id implicitamente via JOIN — mas o tipo não inclui usuario_id.
+      // Usamos /admin/usuarios?q=email para obter o id, ou pedimos directamente pelo email via endpoint genérico.
+      // Solução: chamar a rota com o fornecedor_id (o backend procura pelo id do utilizador via JOIN)
+      // O endpoint PUT /admin/usuarios/:id/reset-password usa o id do utilizador — precisamos do usuario_id.
+      // A página não tem usuario_id no tipo. Vamos buscar via /admin/usuarios pesquisando pelo email.
+      const todosUsers = await api.admin.usuarios(f.email) as Array<{ id: string; email: string }>
+      const user = todosUsers.find(u => u.email === f.email)
+      if (!user) { alert('Utilizador não encontrado'); return }
+      const res = await api.admin.resetarPassword(user.id, novaPwd) as { mensagem: string }
+      alert(res.mensagem)
+    } catch (err) {
+      alert(err instanceof ErroAPI ? err.message : 'Erro ao repor password')
+    }
+  }
+
   if (carregando) {
     return (
       <div className="p-6 space-y-3">
@@ -70,17 +97,25 @@ export default function PaginaFornecedoresAdmin() {
               </p>
             </div>
 
-            <button
-              onClick={() => toggleSuspender(f)}
-              disabled={atualizando === f.id}
-              className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 shrink-0 ${
-                f.suspenso
-                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                  : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-              }`}
-            >
-              {atualizando === f.id ? '…' : f.suspenso ? 'Reactivar' : 'Suspender'}
-            </button>
+            <div className="flex flex-col gap-1.5 shrink-0">
+              <button
+                onClick={() => toggleSuspender(f)}
+                disabled={atualizando === f.id}
+                className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors disabled:opacity-50 ${
+                  f.suspenso
+                    ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                    : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                }`}
+              >
+                {atualizando === f.id ? '…' : f.suspenso ? 'Reactivar' : 'Suspender'}
+              </button>
+              <button
+                onClick={() => reporPassword(f)}
+                className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors"
+              >
+                Repor password
+              </button>
+            </div>
           </div>
         ))}
       </div>

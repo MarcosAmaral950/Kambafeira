@@ -74,4 +74,57 @@ export async function rotasAuth(servidor: FastifyInstance) {
       return rows[0]
     }
   )
+
+  // PUT /auth/alterar-password  (rota protegida — o próprio utilizador altera a sua password)
+  servidor.put(
+    '/auth/alterar-password',
+    { preHandler: [servidor.verificarToken] },
+    async (req, reply) => {
+      const { password_actual, password_nova } = req.body as {
+        password_actual: string
+        password_nova: string
+      }
+      if (!password_actual || !password_nova) {
+        return reply.status(400).send({ erro: 'Preenche todos os campos' })
+      }
+      if (password_nova.length < 8) {
+        return reply.status(400).send({ erro: 'A nova password deve ter pelo menos 8 caracteres' })
+      }
+
+      const { rows: [usuario] } = await servidor.db.query(
+        'SELECT password_hash FROM usuarios WHERE id = $1',
+        [req.usuarioId]
+      )
+      const bcrypt = await import('bcrypt')
+      const correcta = await bcrypt.compare(password_actual, usuario.password_hash)
+      if (!correcta) return reply.status(401).send({ erro: 'Password actual incorrecta' })
+
+      const novoHash = await bcrypt.hash(password_nova, 10)
+      await servidor.db.query(
+        'UPDATE usuarios SET password_hash = $1 WHERE id = $2',
+        [novoHash, req.usuarioId]
+      )
+      return { mensagem: 'Password alterada com sucesso' }
+    }
+  )
+
+  // PUT /auth/me/actualizar  (rota protegida — o próprio utilizador actualiza nome e telefone)
+  servidor.put(
+    '/auth/me/actualizar',
+    { preHandler: [servidor.verificarToken] },
+    async (req, reply) => {
+      const { nome, telefone } = req.body as { nome?: string; telefone?: string }
+      if (!nome?.trim()) return reply.status(400).send({ erro: 'Nome não pode ser vazio' })
+
+      const { rows: [u] } = await servidor.db.query(
+        `UPDATE usuarios SET
+           nome     = COALESCE($1, nome),
+           telefone = COALESCE($2, telefone)
+         WHERE id = $3
+         RETURNING id, nome, email, telefone, perfil`,
+        [nome.trim(), telefone?.trim() || null, req.usuarioId]
+      )
+      return u
+    }
+  )
 }
