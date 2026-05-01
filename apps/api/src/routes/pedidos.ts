@@ -8,6 +8,7 @@ const schemaCriarPedido = z.object({
   quantidade: z.number().int().min(1).default(1),
   notas_comprador: z.string().max(500).optional(),
   metodo_pagamento: z.string().max(50).optional(),
+  comprador_id: z.string().uuid().optional(), // só admin pode usar
 })
 
 const schemaAtualizarStatus = z.object({
@@ -18,13 +19,26 @@ const schemaAtualizarStatus = z.object({
 
 export async function rotasPedidos(servidor: FastifyInstance) {
 
-  // POST /pedidos — comprador cria pedido
+  // POST /pedidos — comprador ou admin (pedido manual) cria pedido
   servidor.post('/pedidos', { preHandler: [servidor.verificarToken] }, async (req, reply) => {
     if (req.usuarioPerfil === 'fornecedor') {
       return reply.status(403).send({ erro: 'Fornecedores não podem fazer pedidos' })
     }
 
     const dados = schemaCriarPedido.parse(req.body)
+
+    // Determinar o comprador
+    let compradorId = req.usuarioId
+    if (req.usuarioPerfil === 'admin') {
+      if (!dados.comprador_id) return reply.status(400).send({ erro: 'comprador_id obrigatório para pedido manual do admin' })
+      // Verificar que o comprador existe
+      const { rows: [comp] } = await servidor.db.query(
+        `SELECT id FROM usuarios WHERE id = $1 AND perfil = 'comprador'`,
+        [dados.comprador_id]
+      )
+      if (!comp) return reply.status(404).send({ erro: 'Comprador não encontrado' })
+      compradorId = dados.comprador_id
+    }
 
     const { rows: [peca] } = await servidor.db.query(
       `SELECT id, preco, estoque, titulo, status, fornecedor_id FROM pecas WHERE id = $1`,
@@ -42,7 +56,7 @@ export async function rotasPedidos(servidor: FastifyInstance) {
          (peca_id, fornecedor_id, comprador_id, quantidade, preco_unitario, preco_total, metodo_pagamento, notas_comprador)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [dados.peca_id, peca.fornecedor_id, req.usuarioId, dados.quantidade,
+      [dados.peca_id, peca.fornecedor_id, compradorId, dados.quantidade,
         peca.preco, precoTotal, dados.metodo_pagamento ?? null, dados.notas_comprador ?? null]
     )
 
@@ -81,7 +95,7 @@ export async function rotasPedidos(servidor: FastifyInstance) {
       const telForn = forn?.whatsapp || forn?.telefone
       if (telForn) {
         const { rows: [comprador] } = await servidor.db.query(
-          'SELECT nome FROM usuarios WHERE id = $1', [req.usuarioId]
+          'SELECT nome FROM usuarios WHERE id = $1', [compradorId]
         )
         notificarNovoPedido({
           telefone: telForn,

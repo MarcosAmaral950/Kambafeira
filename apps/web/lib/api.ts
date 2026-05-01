@@ -91,6 +91,9 @@ export const api = {
     // Actualização rápida de estoque, preço e/ou status
     atualizarRapido: (id: string, dados: { estoque?: number; preco?: number; status?: string }) =>
       apiFetch(`/fornecedor/pecas/${id}/estoque`, { metodo: 'PATCH', corpo: dados }),
+    doFornecedor: (fornecedorId: string) =>
+      apiFetch(`/pecas?fornecedor_id=${fornecedorId}&limite=50`),
+    meuId: () => apiFetch('/fornecedor/meu-id'),
   },
 
   // ── Categorias ────────────────────────────────────────────────
@@ -126,6 +129,11 @@ export const api = {
     pecasAdmin:       (fornecedorId?: string) => apiFetch(`/admin/pecas${fornecedorId ? `?fornecedor_id=${fornecedorId}` : ''}`),
     fornecedoresLista: ()                     => apiFetch('/admin/fornecedores-lista'),
     criarPecaAdmin:   (dados: object)         => apiFetch('/pecas', { metodo: 'POST', corpo: dados }),
+    suspenderPeca: (id: string, status: string) =>
+      apiFetch(`/admin/pecas/${id}/status`, { metodo: 'PATCH', corpo: { status } }),
+    compradores: () => apiFetch('/admin/compradores'),
+    pedidoManual: (dados: { peca_id: string; comprador_id: string; quantidade: number; notas_comprador?: string; metodo_pagamento?: string }) =>
+      apiFetch('/pedidos', { metodo: 'POST', corpo: dados }),
   },
 
   // ── Stock ─────────────────────────────────────────────────────

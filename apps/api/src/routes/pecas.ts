@@ -20,6 +20,12 @@ export async function rotasPecas(servidor: FastifyInstance) {
     return obterPecaServico(servidor.db, req.params.id)
   })
 
+  // GET /fornecedor/meu-id — devolve o fornecedor_id do utilizador autenticado
+  servidor.get('/fornecedor/meu-id', { preHandler: [servidor.apenasFornecedor] }, async (req) => {
+    const fornecedorId = await obterFornecedorId(servidor.db, req.usuarioId)
+    return { fornecedor_id: fornecedorId }
+  })
+
   // GET /fornecedor/pecas — peças do fornecedor autenticado
   servidor.get(
     '/fornecedor/pecas',
@@ -91,6 +97,24 @@ export async function rotasPecas(servidor: FastifyInstance) {
     async (req) => {
       const fornecedorId = (req.query as { fornecedor_id?: string }).fornecedor_id
       return listarTodasPecasAdmin(servidor.db, fornecedorId)
+    }
+  )
+
+  // PATCH /admin/pecas/:id/status — admin suspende/activa qualquer peça
+  servidor.patch<{ Params: { id: string } }>(
+    '/admin/pecas/:id/status',
+    { preHandler: [servidor.apenasAdmin] },
+    async (req, reply) => {
+      const { status } = req.body as { status: string }
+      if (!['activo', 'suspenso', 'rascunho'].includes(status)) {
+        return reply.status(400).send({ erro: 'Estado inválido' })
+      }
+      const { rows: [peca] } = await servidor.db.query(
+        `UPDATE pecas SET status = $1 WHERE id = $2 AND status != 'removido' RETURNING id, titulo, status`,
+        [status, req.params.id]
+      )
+      if (!peca) return reply.status(404).send({ erro: 'Peça não encontrada' })
+      return peca
     }
   )
 

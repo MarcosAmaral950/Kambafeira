@@ -65,6 +65,10 @@ export async function listarPecasServico(db: Pool, filtros: FiltrosPecasInput) {
     condicoes.push(`to_tsvector('portuguese', p.titulo || ' ' || p.descricao) @@ plainto_tsquery('portuguese', $${i++})`)
     params.push(filtros.q)
   }
+  if (filtros.fornecedor_id) {
+    condicoes.push(`p.fornecedor_id = $${i++}`)
+    params.push(filtros.fornecedor_id)
+  }
 
   const onde = condicoes.join(' AND ')
   const offset = (filtros.pagina - 1) * filtros.limite

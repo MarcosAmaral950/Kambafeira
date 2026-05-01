@@ -85,6 +85,14 @@ export async function rotasAdmin(servidor: FastifyInstance) {
     return rows
   })
 
+  // GET /admin/compradores — lista compradores para dropdown de pedido manual
+  servidor.get('/admin/compradores', { preHandler: [servidor.apenasAdmin] }, async () => {
+    const { rows } = await servidor.db.query(
+      `SELECT id, nome, email, telefone FROM usuarios WHERE perfil = 'comprador' AND ativo = true ORDER BY nome`
+    )
+    return rows
+  })
+
   // GET /admin/pedidos — todos os pedidos da plataforma
   servidor.get('/admin/pedidos', { preHandler: [servidor.apenasAdmin] }, async () => {
     const { rows } = await servidor.db.query(
