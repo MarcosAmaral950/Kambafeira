@@ -1,0 +1,9 @@
+node_modules
+.next
+apps/api/dist
+.env
+.env.local
+*.log
+.git
+sessions
+kambafeira-claude-code.zip

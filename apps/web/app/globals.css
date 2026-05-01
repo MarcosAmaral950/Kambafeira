@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --vermelho: #dc2626;
+  --preto: #111111;
+  --ouro: #f59e0b;
+}
