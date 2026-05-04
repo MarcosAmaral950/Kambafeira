@@ -511,4 +511,114 @@ export async function rotasSeed(servidor: FastifyInstance) {
       totais,
     }
   })
+
+  // ── GET /seed/verificar — contagens de todas as tabelas ────────────────────
+  servidor.get('/seed/verificar', async (req, reply) => {
+    if (process.env.NODE_ENV === 'production' && process.env.SEED_HABILITADO !== 'true') {
+      return reply.status(404).send({ erro: 'Não encontrado' })
+    }
+    const chave = (req.query as { chave?: string }).chave
+    if (chave !== 'kamba2026seed') {
+      return reply.status(403).send({ erro: 'Não autorizado' })
+    }
+
+    const db = servidor.db
+
+    const [
+      totalUsuarios, admins, fornecedores, compradores,
+      chaves, contratosActivos,
+      pecasTotal, pecasActivas, pecasRascunho, pecasSuspensas,
+      categorias,
+      vendas, vendasEntregue, vendasConfirmado, vendasCancelado, vendasPendente,
+      comissoes, totalComissoes,
+      avaliacoes, mediaAvaliacao,
+      transportadoras, zonas,
+      fretes, fretesEntregue,
+      tickets, ticketsAbertos, mensagens,
+      movEstoque,
+      contratos,
+    ] = await Promise.all([
+      db.query('SELECT COUNT(*) FROM usuarios'),
+      db.query("SELECT COUNT(*) FROM usuarios WHERE perfil='admin'"),
+      db.query("SELECT COUNT(*) FROM usuarios WHERE perfil='fornecedor'"),
+      db.query("SELECT COUNT(*) FROM usuarios WHERE perfil='comprador'"),
+      db.query('SELECT COUNT(*) FROM chaves_acesso'),
+      db.query("SELECT COUNT(*) FROM contratos WHERE ativo=true"),
+      db.query('SELECT COUNT(*) FROM pecas'),
+      db.query("SELECT COUNT(*) FROM pecas WHERE status='activa'"),
+      db.query("SELECT COUNT(*) FROM pecas WHERE status='rascunho'"),
+      db.query("SELECT COUNT(*) FROM pecas WHERE status='suspenso'"),
+      db.query('SELECT COUNT(*) FROM categorias'),
+      db.query('SELECT COUNT(*) FROM vendas'),
+      db.query("SELECT COUNT(*) FROM vendas WHERE status='entregue'"),
+      db.query("SELECT COUNT(*) FROM vendas WHERE status IN ('confirmado','em_preparacao','enviado')"),
+      db.query("SELECT COUNT(*) FROM vendas WHERE status='cancelado'"),
+      db.query("SELECT COUNT(*) FROM vendas WHERE status='pendente'"),
+      db.query('SELECT COUNT(*) FROM comissoes'),
+      db.query('SELECT COALESCE(SUM(valor_comissao),0) FROM comissoes'),
+      db.query('SELECT COUNT(*) FROM avaliacoes'),
+      db.query('SELECT ROUND(AVG(nota),2) FROM avaliacoes'),
+      db.query('SELECT COUNT(*) FROM transportadoras'),
+      db.query('SELECT COUNT(*) FROM zonas_entrega'),
+      db.query('SELECT COUNT(*) FROM fretes'),
+      db.query("SELECT COUNT(*) FROM fretes WHERE status='entregue'"),
+      db.query('SELECT COUNT(*) FROM tickets_sac'),
+      db.query("SELECT COUNT(*) FROM tickets_sac WHERE status NOT IN ('fechado','resolvido')"),
+      db.query('SELECT COUNT(*) FROM mensagens_sac'),
+      db.query('SELECT COUNT(*) FROM movimentos_estoque'),
+      db.query('SELECT COUNT(*) FROM contratos'),
+    ])
+
+    return {
+      ok: true,
+      verificado_em: new Date().toISOString(),
+      tabelas: {
+        usuarios: {
+          total: parseInt(totalUsuarios.rows[0].count),
+          admins: parseInt(admins.rows[0].count),
+          fornecedores: parseInt(fornecedores.rows[0].count),
+          compradores: parseInt(compradores.rows[0].count),
+        },
+        chaves_acesso:   parseInt(chaves.rows[0].count),
+        contratos: {
+          total:  parseInt(contratos.rows[0].count),
+          activos: parseInt(contratosActivos.rows[0].count),
+        },
+        categorias: parseInt(categorias.rows[0].count),
+        pecas: {
+          total:    parseInt(pecasTotal.rows[0].count),
+          activas:  parseInt(pecasActivas.rows[0].count),
+          rascunho: parseInt(pecasRascunho.rows[0].count),
+          suspensas: parseInt(pecasSuspensas.rows[0].count),
+        },
+        vendas: {
+          total:      parseInt(vendas.rows[0].count),
+          entregue:   parseInt(vendasEntregue.rows[0].count),
+          em_curso:   parseInt(vendasConfirmado.rows[0].count),
+          cancelado:  parseInt(vendasCancelado.rows[0].count),
+          pendente:   parseInt(vendasPendente.rows[0].count),
+        },
+        comissoes: {
+          total:       parseInt(comissoes.rows[0].count),
+          valor_total_kz: parseFloat(totalComissoes.rows[0].coalesce),
+        },
+        avaliacoes: {
+          total: parseInt(avaliacoes.rows[0].count),
+          media: parseFloat(mediaAvaliacao.rows[0].round ?? '0'),
+        },
+        transportadoras: parseInt(transportadoras.rows[0].count),
+        zonas_entrega:   parseInt(zonas.rows[0].count),
+        fretes: {
+          total:    parseInt(fretes.rows[0].count),
+          entregue: parseInt(fretesEntregue.rows[0].count),
+        },
+        tickets_sac: {
+          total:   parseInt(tickets.rows[0].count),
+          abertos: parseInt(ticketsAbertos.rows[0].count),
+          mensagens: parseInt(mensagens.rows[0].count),
+        },
+        movimentos_estoque: parseInt(movEstoque.rows[0].count),
+      },
+    }
+  })
 }
