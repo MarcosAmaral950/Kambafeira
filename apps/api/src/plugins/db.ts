@@ -145,6 +145,17 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
     servidor.log.warn({ err: erroMigracaoFase3 }, 'Aviso nas migrações da Fase 3')
   }
 
+  // Migração correctiva: colunas adicionadas após criação inicial das tabelas
+  try {
+    await pool.query(`
+      ALTER TABLE zonas_entrega
+        ADD COLUMN IF NOT EXISTS provincia_origem VARCHAR(100) NOT NULL DEFAULT 'Luanda';
+    `)
+    servidor.log.info('Migrações correctivas executadas')
+  } catch (erroCorrectiva) {
+    servidor.log.warn({ err: erroCorrectiva }, 'Aviso nas migrações correctivas')
+  }
+
   servidor.decorate('db', pool)
 
   servidor.addHook('onClose', async () => {
