@@ -145,10 +145,10 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
     servidor.log.warn({ err: erroMigracaoFase3 }, 'Aviso nas migrações da Fase 3')
   }
 
-  // Migração correctiva: colunas e triggers corrigidos após criação inicial
+  // Migração correctiva: todas as diferenças entre schema inicial e Fase 3
   try {
     await pool.query(`
-      -- Colunas em falta em zonas_entrega (Phase 3 usa origem/destino)
+      -- 1. zonas_entrega: schema inicial só tinha provincia/municipio/bairro
       ALTER TABLE zonas_entrega
         ADD COLUMN IF NOT EXISTS provincia_origem  VARCHAR(100) NOT NULL DEFAULT 'Luanda',
         ADD COLUMN IF NOT EXISTS provincia_destino VARCHAR(100) NOT NULL DEFAULT 'Luanda',
@@ -159,7 +159,21 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
       ALTER TABLE zonas_entrega
         ALTER COLUMN provincia DROP NOT NULL;
 
-      -- Corrigir triggers: pecas e vendas usam atualizada_em (não atualizado_em)
+      -- 2. fretes: schema inicial não tinha zona_id, endereco_texto, peso_kg, distancia_km, notas
+      ALTER TABLE fretes
+        ADD COLUMN IF NOT EXISTS zona_id        UUID REFERENCES zonas_entrega(id),
+        ADD COLUMN IF NOT EXISTS endereco_texto TEXT,
+        ADD COLUMN IF NOT EXISTS peso_kg        NUMERIC(8,2) NOT NULL DEFAULT 1,
+        ADD COLUMN IF NOT EXISTS distancia_km   INTEGER      NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS notas          TEXT;
+
+      -- 3. tickets_sac: schema inicial não tinha fotos[]
+      ALTER TABLE tickets_sac
+        ADD COLUMN IF NOT EXISTS fotos TEXT[] NOT NULL DEFAULT '{}';
+
+      -- 4. mensagens_sac: tabela nova da Fase 3 (CREATE TABLE IF NOT EXISTS já trata)
+
+      -- 5. Corrigir triggers: pecas e vendas usam atualizada_em (não atualizado_em)
       CREATE OR REPLACE FUNCTION set_atualizada_em()
       RETURNS TRIGGER AS $$
       BEGIN NEW.atualizada_em = NOW(); RETURN NEW; END;
