@@ -155,6 +155,8 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
         ADD COLUMN IF NOT EXISTS preco_por_kg      NUMERIC(8,2)  NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS preco_por_km      NUMERIC(8,2)  NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS distancia_km      INTEGER       NOT NULL DEFAULT 0;
+      ALTER TABLE zonas_entrega
+        ALTER COLUMN provincia DROP NOT NULL;
     `)
     servidor.log.info('Migrações correctivas executadas')
   } catch (erroCorrectiva) {

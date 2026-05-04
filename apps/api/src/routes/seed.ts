@@ -256,8 +256,8 @@ export async function rotasSeed(servidor: FastifyInstance) {
         [tid, z.origem, z.destino])
       if (ex.rows.length > 0) { idsZonas.push(ex.rows[0].id as string); continue }
       const { rows: [zr] } = await db.query(
-        `INSERT INTO zonas_entrega (transportadora_id,provincia_origem,provincia_destino,preco_base,preco_por_kg,preco_por_km,distancia_km) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-        [tid, z.origem, z.destino, z.base, z.pkg, z.pkm, z.dist])
+        `INSERT INTO zonas_entrega (transportadora_id,provincia,provincia_origem,provincia_destino,preco_base,preco_por_kg,preco_por_km,distancia_km) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+        [tid, z.destino, z.origem, z.destino, z.base, z.pkg, z.pkm, z.dist])
       idsZonas.push(zr.id as string)
     }
     const idsTransp = Object.values(tIdPorNome)
