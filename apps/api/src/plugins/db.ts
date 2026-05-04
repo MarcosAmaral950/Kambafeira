@@ -149,7 +149,12 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
   try {
     await pool.query(`
       ALTER TABLE zonas_entrega
-        ADD COLUMN IF NOT EXISTS provincia_origem VARCHAR(100) NOT NULL DEFAULT 'Luanda';
+        ADD COLUMN IF NOT EXISTS provincia_origem  VARCHAR(100) NOT NULL DEFAULT 'Luanda',
+        ADD COLUMN IF NOT EXISTS provincia_destino VARCHAR(100) NOT NULL DEFAULT 'Luanda',
+        ADD COLUMN IF NOT EXISTS preco_base        NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS preco_por_kg      NUMERIC(8,2)  NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS preco_por_km      NUMERIC(8,2)  NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS distancia_km      INTEGER       NOT NULL DEFAULT 0;
     `)
     servidor.log.info('Migrações correctivas executadas')
   } catch (erroCorrectiva) {
