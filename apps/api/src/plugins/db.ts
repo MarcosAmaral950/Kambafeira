@@ -145,9 +145,10 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
     servidor.log.warn({ err: erroMigracaoFase3 }, 'Aviso nas migrações da Fase 3')
   }
 
-  // Migração correctiva: colunas adicionadas após criação inicial das tabelas
+  // Migração correctiva: colunas e triggers corrigidos após criação inicial
   try {
     await pool.query(`
+      -- Colunas em falta em zonas_entrega (Phase 3 usa origem/destino)
       ALTER TABLE zonas_entrega
         ADD COLUMN IF NOT EXISTS provincia_origem  VARCHAR(100) NOT NULL DEFAULT 'Luanda',
         ADD COLUMN IF NOT EXISTS provincia_destino VARCHAR(100) NOT NULL DEFAULT 'Luanda',
@@ -157,6 +158,23 @@ async function pluginBancoDadosImpl(servidor: FastifyInstance) {
         ADD COLUMN IF NOT EXISTS distancia_km      INTEGER       NOT NULL DEFAULT 0;
       ALTER TABLE zonas_entrega
         ALTER COLUMN provincia DROP NOT NULL;
+
+      -- Corrigir triggers: pecas e vendas usam atualizada_em (não atualizado_em)
+      CREATE OR REPLACE FUNCTION set_atualizada_em()
+      RETURNS TRIGGER AS $$
+      BEGIN NEW.atualizada_em = NOW(); RETURN NEW; END;
+      $$ LANGUAGE plpgsql;
+
+      DROP TRIGGER IF EXISTS trg_pecas_upd  ON pecas;
+      DROP TRIGGER IF EXISTS trg_vendas_upd ON vendas;
+
+      CREATE TRIGGER trg_pecas_upd
+        BEFORE UPDATE ON pecas
+        FOR EACH ROW EXECUTE FUNCTION set_atualizada_em();
+
+      CREATE TRIGGER trg_vendas_upd
+        BEFORE UPDATE ON vendas
+        FOR EACH ROW EXECUTE FUNCTION set_atualizada_em();
     `)
     servidor.log.info('Migrações correctivas executadas')
   } catch (erroCorrectiva) {
