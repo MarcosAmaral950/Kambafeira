@@ -7,6 +7,11 @@ const schemaSuspender = z.object({
   motivo: z.string().max(500).optional(),
 })
 
+const schemaContrato = z.object({
+  taxa_comissao: z.number().min(8).max(12),
+  observacoes: z.string().max(500).optional(),
+})
+
 export async function rotasAdmin(servidor: FastifyInstance) {
 
   // GET /admin/usuarios — listar todos os utilizadores
@@ -112,6 +117,107 @@ export async function rotasAdmin(servidor: FastifyInstance) {
       return { mensagem: `Password de ${u.nome as string} reposta com sucesso` }
     }
   )
+
+  // ── Contratos e Comissões ─────────────────────────────────────
+
+  // GET /admin/contratos — todos os fornecedores com contrato activo e histórico
+  servidor.get('/admin/contratos', { preHandler: [servidor.apenasAdmin] }, async () => {
+    const { rows } = await servidor.db.query(
+      `SELECT f.id AS fornecedor_id, u.nome, u.email, f.provincia, f.suspenso,
+              f.total_vendas, f.avaliacao_media,
+              c.id             AS contrato_id,
+              c.taxa_comissao,
+              c.data_inicio,
+              c.data_fim,
+              c.ativo          AS contrato_ativo,
+              c.observacoes,
+              c.criado_em      AS contrato_criado_em,
+              -- comissões acumuladas
+              COALESCE(SUM(cm.valor_comissao), 0)  AS total_comissoes,
+              COALESCE(SUM(cm.valor_liquido),  0)  AS total_liquido,
+              COUNT(cm.id)                         AS total_vendas_comissionadas
+       FROM fornecedores f
+       JOIN usuarios u ON f.usuario_id = u.id
+       LEFT JOIN contratos c ON c.fornecedor_id = f.id AND c.ativo = true
+       LEFT JOIN comissoes cm ON cm.fornecedor_id = f.id
+       GROUP BY f.id, u.nome, u.email, f.provincia, f.suspenso,
+                f.total_vendas, f.avaliacao_media,
+                c.id, c.taxa_comissao, c.data_inicio, c.data_fim,
+                c.ativo, c.observacoes, c.criado_em
+       ORDER BY u.nome`
+    )
+    return rows
+  })
+
+  // GET /admin/contratos/:fornecedorId/historico — histórico de contratos
+  servidor.get<{ Params: { fornecedorId: string } }>(
+    '/admin/contratos/:fornecedorId/historico',
+    { preHandler: [servidor.apenasAdmin] },
+    async (req) => {
+      const { rows } = await servidor.db.query(
+        `SELECT c.*, u.nome AS criado_por_nome
+         FROM contratos c
+         LEFT JOIN usuarios u ON u.id = $2::uuid
+         WHERE c.fornecedor_id = $1
+         ORDER BY c.criado_em DESC`,
+        [req.params.fornecedorId, req.usuarioId]
+      )
+      return rows
+    }
+  )
+
+  // PUT /admin/contratos/:fornecedorId — definir/actualizar taxa do fornecedor
+  servidor.put<{ Params: { fornecedorId: string } }>(
+    '/admin/contratos/:fornecedorId',
+    { preHandler: [servidor.apenasAdmin] },
+    async (req, reply) => {
+      const dados = schemaContrato.parse(req.body)
+
+      // Verificar que o fornecedor existe
+      const { rows: [f] } = await servidor.db.query(
+        'SELECT id FROM fornecedores WHERE id = $1', [req.params.fornecedorId]
+      )
+      if (!f) return reply.status(404).send({ erro: 'Fornecedor não encontrado' })
+
+      // Desactivar contrato anterior
+      await servidor.db.query(
+        `UPDATE contratos SET ativo = false, data_fim = CURRENT_DATE
+         WHERE fornecedor_id = $1 AND ativo = true`,
+        [req.params.fornecedorId]
+      )
+
+      // Criar novo contrato
+      const { rows: [novo] } = await servidor.db.query(
+        `INSERT INTO contratos (fornecedor_id, taxa_comissao, observacoes, ativo)
+         VALUES ($1, $2, $3, true)
+         RETURNING *`,
+        [req.params.fornecedorId, dados.taxa_comissao, dados.observacoes ?? null]
+      )
+
+      reply.status(201)
+      return novo
+    }
+  )
+
+  // GET /admin/comissoes — resumo financeiro de comissões
+  servidor.get('/admin/comissoes', { preHandler: [servidor.apenasAdmin] }, async () => {
+    const { rows } = await servidor.db.query(
+      `SELECT cm.id, cm.valor_venda, cm.taxa_aplicada, cm.valor_comissao,
+              cm.valor_liquido, cm.status, cm.criada_em,
+              u.nome  AS fornecedor_nome,
+              p.titulo AS peca_titulo,
+              uc.nome  AS comprador_nome
+       FROM comissoes cm
+       JOIN fornecedores f ON cm.fornecedor_id = f.id
+       JOIN usuarios u     ON f.usuario_id = u.id
+       JOIN vendas v       ON cm.venda_id = v.id
+       JOIN pecas p        ON v.peca_id = p.id
+       JOIN usuarios uc    ON v.comprador_id = uc.id
+       ORDER BY cm.criada_em DESC
+       LIMIT 200`
+    )
+    return rows
+  })
 
   // GET /admin/pedidos — todos os pedidos da plataforma
   servidor.get('/admin/pedidos', { preHandler: [servidor.apenasAdmin] }, async () => {

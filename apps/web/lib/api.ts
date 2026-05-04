@@ -140,6 +140,12 @@ export const api = {
     compradores: () => apiFetch('/admin/compradores'),
     pedidoManual: (dados: { peca_id: string; comprador_id: string; quantidade: number; notas_comprador?: string; metodo_pagamento?: string }) =>
       apiFetch('/pedidos', { metodo: 'POST', corpo: dados }),
+    // Contratos e comissões
+    contratos: () => apiFetch('/admin/contratos'),
+    historicoContrato: (fornecedorId: string) => apiFetch(`/admin/contratos/${fornecedorId}/historico`),
+    definirTaxa: (fornecedorId: string, dados: { taxa_comissao: number; observacoes?: string }) =>
+      apiFetch(`/admin/contratos/${fornecedorId}`, { metodo: 'PUT', corpo: dados }),
+    comissoes: () => apiFetch('/admin/comissoes'),
   },
 
   // ── Stock ─────────────────────────────────────────────────────

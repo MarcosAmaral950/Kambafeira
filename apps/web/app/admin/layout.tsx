@@ -30,6 +30,7 @@ export default function LayoutAdmin({ children }: { children: React.ReactNode })
     { href: '/admin',                   label: 'Resumo',       icone: '📊' },
     { href: '/admin/fornecedores',      label: 'Fornecedores', icone: '🏪' },
     { href: '/admin/utilizadores',      label: 'Utilizadores', icone: '👥' },
+    { href: '/admin/contratos',         label: 'Comissões',    icone: '💰' },
     { href: '/admin/pecas',             label: 'Peças',        icone: '🔧' },
     { href: '/admin/stock',             label: 'Stock',        icone: '📦' },
     { href: '/admin/pedidos',           label: 'Pedidos',      icone: '🛒' },
